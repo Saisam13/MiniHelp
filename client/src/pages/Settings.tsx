@@ -30,7 +30,7 @@ export function Settings() {
     name: '',
     email: '',
     password: '',
-    role: 'User',
+    role: 'employee',
     department: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -140,7 +140,7 @@ export function Settings() {
       
       if (res.data && res.data.success) {
         setIsNewUserModalOpen(false);
-        setNewUser({ name: '', email: '', password: '', role: 'User', department: '' });
+        setNewUser({ name: '', email: '', password: '', role: 'employee', department: '' });
         fetchUsers();
         alert('User added successfully!');
       } else {
@@ -342,7 +342,7 @@ export function Settings() {
             <div className="modal-header">
               <h2>Add New User</h2>
               <button className="icon-btn" onClick={() => setIsNewUserModalOpen(false)}>
-                <X size={20} />
+                <X size={20} strokeWidth={1.5} />
               </button>
             </div>
             <form onSubmit={handleCreateUser} className="modal-body">
@@ -385,9 +385,10 @@ export function Settings() {
                     value={newUser.role}
                     onChange={e => setNewUser({...newUser, role: e.target.value})}
                   >
-                    <option value="User">User</option>
-                    <option value="Agent">Agent</option>
-                    <option value="Admin">Admin</option>
+                    <option value="employee">User</option>
+                    <option value="agent">Agent</option>
+                    <option value="admin">Admin</option>
+                    <option value="dept_head">Department Head</option>
                   </select>
                 </div>
                 <div className="form-group">

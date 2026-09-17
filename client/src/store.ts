@@ -19,7 +19,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
-  theme: (localStorage.getItem('minihelp_theme') as 'dark' | 'light') || 'dark',
+  theme: (localStorage.getItem('minihelp_theme') as 'dark' | 'light') || 'light',
   login: (user) => set({ user, isAuthenticated: true }),
   logout: () => {
     localStorage.removeItem('minihelp_token');

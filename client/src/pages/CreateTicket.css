@@ -225,3 +225,9 @@
   font-size: 0.875rem;
   color: var(--text-primary);
 }
+
+@media (max-width: 768px) {
+  .dept-grid { grid-template-columns: 1fr; }
+  .form-row { flex-direction: column; gap: 16px; }
+  .wizard-content { padding: 20px; }
+}

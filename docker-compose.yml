@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: minimines_root
+      MYSQL_DATABASE: minimines_helpdesk
+      MYSQL_USER: minihelp_user
+      MYSQL_PASSWORD: minihelp_password
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./server/setup.sql:/docker-entrypoint-initdb.d/1_setup.sql
+      - ./server/update_push.sql:/docker-entrypoint-initdb.d/2_update_push.sql
+
+  backend:
+    build:
+      context: ./server
+    restart: always
+    environment:
+      DB_HOST: db
+      DB_NAME: minimines_helpdesk
+      DB_USER: minihelp_user
+      DB_PASS: minihelp_password
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./client
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:

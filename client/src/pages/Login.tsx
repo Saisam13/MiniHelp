@@ -37,9 +37,9 @@ export function Login() {
     <div className="login-container">
       <div className="login-left">
         <div className="login-form-wrapper glass">
-          <div className="brand-header">
-            <div className="logo-placeholder">MH</div>
-            <h2>MiniHelp</h2>
+          <div className="brand-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '30px' }}>
+            <img src="/logo.png" alt="MiniMines" style={{ height: '40px', objectFit: 'contain' }} />
+            <h2 style={{ margin: 0 }}>Helpdesk</h2>
           </div>
           <h1>Welcome back</h1>
           <p className="login-subtitle">Sign in to your account to continue</p>

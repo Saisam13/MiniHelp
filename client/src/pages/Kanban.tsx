@@ -1,18 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api } from '../api';
+import { useAuthStore } from '../store';
 import './Kanban.css';
 
-const initialTickets = [
-  { id: 'TKT-1024', title: 'Cannot access internal CRM', status: 'Open', priority: 'High' },
-  { id: 'TKT-1025', title: 'Need access to Github', status: 'Open', priority: 'Medium' },
-  { id: 'TKT-1023', title: 'Request for new software license', status: 'In Progress', priority: 'Medium' },
-  { id: 'TKT-1022', title: 'VPN connection dropping', status: 'Resolved', priority: 'Critical' },
-];
-
 export function Kanban() {
-  const [tickets, setTickets] = useState(initialTickets);
+  const user = useAuthStore(state => state.user);
+  const [tickets, setTickets] = useState<any[]>([]);
   const [draggedTicketId, setDraggedTicketId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const columns = ['Open', 'In Progress', 'Resolved'];
+  // Map backend statuses to columns
+  const columns = [
+    { key: 'open', label: 'Open' },
+    { key: 'in_progress', label: 'In Progress' },
+    { key: 'resolved', label: 'Resolved' }
+  ];
+
+  useEffect(() => {
+    if (user) fetchTickets();
+  }, [user]);
+
+  const fetchTickets = async () => {
+    setLoading(true);
+    try {
+      if (!user) return;
+      const url = `/tickets.php?role=${user.role}&user_id=${user.id}&department_id=${(user as any).department_id || ''}`;
+      
+      const res = await api.get(url);
+      if (res.data && res.data.success) {
+        setTickets(res.data.data);
+      }
+    } catch (err) {
+      console.error('API Error', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedTicketId(id);
@@ -24,13 +47,23 @@ export function Kanban() {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e: React.DragEvent, status: string) => {
+  const handleDrop = async (e: React.DragEvent, newStatus: string) => {
     e.preventDefault();
-    if (draggedTicketId) {
-      setTickets(tickets.map(t => 
-        t.id === draggedTicketId ? { ...t, status } : t
-      ));
-      setDraggedTicketId(null);
+    if (!draggedTicketId) return;
+
+    // Optimistic update
+    setTickets(tickets.map(t => 
+      t.id === draggedTicketId ? { ...t, status: newStatus } : t
+    ));
+    setDraggedTicketId(null);
+
+    // Backend update
+    try {
+      await api.patch(`/tickets.php?id=${draggedTicketId}`, { status: newStatus });
+    } catch (err) {
+      console.error('Failed to update status in DB', err);
+      // Revert on error
+      fetchTickets();
     }
   };
 
@@ -42,42 +75,46 @@ export function Kanban() {
       </div>
 
       <div className="kanban-board">
-        {columns.map(col => (
-          <div 
-            key={col} 
-            className="kanban-col glass"
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, col)}
-          >
-            <div className="col-header">
-              <h3>{col}</h3>
-              <span className="col-count">
-                {tickets.filter(t => t.status === col).length}
-              </span>
-            </div>
-            <div className="col-content">
-              {tickets.filter(t => t.status === col).map(ticket => (
-                <div 
-                  key={ticket.id} 
-                  className="kanban-card"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, ticket.id)}
-                >
-                  <div className="card-top">
-                    <span className="mono ticket-id">{ticket.id}</span>
-                    <span className={`priority-indicator p-${ticket.priority.toLowerCase()}`}></span>
+        {loading ? (
+          <div style={{padding: '20px'}}>Loading tickets...</div>
+        ) : (
+          columns.map(col => (
+            <div 
+              key={col.key} 
+              className="kanban-col glass"
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, col.key)}
+            >
+              <div className="col-header">
+                <h3>{col.label}</h3>
+                <span className="col-count">
+                  {tickets.filter(t => (t.status || 'open') === col.key).length}
+                </span>
+              </div>
+              <div className="col-content">
+                {tickets.filter(t => (t.status || 'open') === col.key).map(ticket => (
+                  <div 
+                    key={ticket.id} 
+                    className="kanban-card"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, ticket.id)}
+                  >
+                    <div className="card-top">
+                      <span className="mono ticket-id">{ticket.ticket_number || ticket.id}</span>
+                      <span className={`priority-indicator p-${(ticket.priority || 'low').toLowerCase()}`}></span>
+                    </div>
+                    <h4>{ticket.title}</h4>
+                    <div className="card-bottom">
+                      <span className={`priority-badge priority-${(ticket.priority || 'low').toLowerCase()}`}>
+                        {(ticket.priority || 'low').toUpperCase()}
+                      </span>
+                    </div>
                   </div>
-                  <h4>{ticket.title}</h4>
-                  <div className="card-bottom">
-                    <span className={`priority-badge priority-${ticket.priority.toLowerCase()}`}>
-                      {ticket.priority}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );

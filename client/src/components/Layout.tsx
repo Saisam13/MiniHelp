@@ -41,32 +41,34 @@ export function Layout() {
     <div className="layout-container">
       {/* Sidebar */}
       <aside className="sidebar glass">
-        <div className="sidebar-header">
-          <div className="logo-placeholder">MH</div>
-          <span className="brand-name">MiniHelp</span>
+        <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img src="/logo.png" alt="MiniMines" style={{ height: '32px', objectFit: 'contain' }} />
+          <span className="brand-name" style={{ fontSize: '1.1rem', fontWeight: 600 }}>Helpdesk</span>
         </div>
         
         <nav className="sidebar-nav">
           <div className="nav-group">
             <div className="nav-group-label">Main Workspace</div>
             <NavLink to="/" end className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
-              <LayoutDashboard size={18} />
+              <LayoutDashboard size={20} strokeWidth={1.5} />
               <span>Dashboard</span>
             </NavLink>
             <NavLink to="/tickets" end className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
-              <Ticket size={18} />
+              <Ticket size={20} strokeWidth={1.5} />
               <span>Pulse Board</span>
             </NavLink>
-            <NavLink to="/tickets/kanban" className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
-              <LayoutDashboard size={18} />
-              <span>Kanban</span>
-            </NavLink>
+            {user?.role !== 'employee' && (
+              <NavLink to="/tickets/kanban" className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
+                <LayoutDashboard size={20} strokeWidth={1.5} />
+                <span>Kanban</span>
+              </NavLink>
+            )}
           </div>
 
           <div className="nav-group">
             <div className="nav-group-label">Actions</div>
             <NavLink to="/tickets/new" className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
-              <PlusCircle size={18} />
+              <PlusCircle size={20} strokeWidth={1.5} />
               <span>Create Ticket</span>
             </NavLink>
           </div>
@@ -75,7 +77,7 @@ export function Layout() {
             <div className="nav-group mt-auto">
               <div className="nav-group-label">Administration</div>
               <NavLink to="/settings" className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
-                <Settings size={18} />
+                <Settings size={20} strokeWidth={1.5} />
                 <span>Settings</span>
               </NavLink>
             </div>
@@ -86,16 +88,12 @@ export function Layout() {
       {/* Main Content Area */}
       <div className="main-wrapper">
         <header className="top-header glass">
-          <div className="header-search">
-            <Search size={18} className="search-icon" />
-            <input type="text" placeholder="Search tickets..." className="search-input" />
-          </div>
-          <div className="header-actions">
+          <div className="header-actions" style={{ marginLeft: 'auto' }}>
             <button className="icon-btn" onClick={toggleTheme}>
-              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              {theme === 'dark' ? <Sun size={20} strokeWidth={1.5} /> : <Moon size={20} strokeWidth={1.5} />}
             </button>
             <button className="icon-btn">
-              <Bell size={20} />
+              <Bell size={20} strokeWidth={1.5} />
             </button>
             <div className="user-profile">
               <div className="avatar">{user?.name.charAt(0)}</div>
@@ -105,7 +103,7 @@ export function Layout() {
               </div>
             </div>
             <button className="icon-btn logout-btn" onClick={logout}>
-              <LogOut size={20} />
+              <LogOut size={20} strokeWidth={1.5} />
             </button>
           </div>
         </header>

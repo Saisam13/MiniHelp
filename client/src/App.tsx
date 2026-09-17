@@ -22,6 +22,16 @@ export default function App() {
   
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+
+    const playNotificationSound = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'PLAY_SOUND') {
+        const audio = new Audio('/notification.mp3');
+        audio.play().catch(e => console.error('Audio play failed:', e));
+      }
+    };
+
+    navigator.serviceWorker?.addEventListener('message', playNotificationSound);
+    return () => navigator.serviceWorker?.removeEventListener('message', playNotificationSound);
   }, [theme]);
 
   return (

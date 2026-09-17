@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import './TicketList.css';
 import { Search, Filter, MessageSquare, X, Send } from 'lucide-react';
+import { useAuthStore } from '../store';
 
 interface Ticket {
   id: string;
@@ -15,6 +16,7 @@ interface Ticket {
 }
 
 export function TicketList() {
+  const user = useAuthStore(state => state.user);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -24,6 +26,7 @@ export function TicketList() {
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // We will fall back to dummy data if API fails
   const dummyTickets = [
@@ -36,15 +39,18 @@ export function TicketList() {
   const fetchTickets = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/tickets.php');
+      if (!user) return;
+      const url = `/tickets.php?role=${user.role}&user_id=${user.id}&department_id=${(user as any).department_id || ''}`;
+      
+      const res = await api.get(url);
       if (res.data && res.data.success) {
         setTickets(res.data.data);
       } else {
-        setTickets(dummyTickets);
+        setTickets([]);
       }
     } catch (err) {
-      console.error('API Error, using dummy data', err);
-      setTickets(dummyTickets);
+      console.error('API Error', err);
+      setTickets([]);
     } finally {
       setLoading(false);
     }
@@ -79,14 +85,11 @@ export function TicketList() {
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'done':
       case 'resolved':
+      case 'closed':
         return 'status-done';
-      case 'working on it':
-      case 'in progress':
+      case 'in_progress':
         return 'status-working';
-      case 'stuck':
-      case 'critical':
       case 'open':
         return 'status-stuck';
       default:
@@ -95,10 +98,11 @@ export function TicketList() {
   };
 
   const handleSendComment = async () => {
-    if (newComment.trim() && activeTicketChat) {
+    if (newComment.trim() && activeTicketChat && user) {
       try {
         const res = await api.post('/comments.php', {
           ticket_id: activeTicketChat,
+          user_id: user.id,
           content: newComment.trim()
         });
         if (res.data && res.data.success) {
@@ -111,6 +115,17 @@ export function TicketList() {
     }
   };
 
+  const handleStatusChange = async (newStatus: string) => {
+    if (activeTicketChat) {
+      try {
+        await api.patch(`/tickets.php?id=${activeTicketChat}`, { status: newStatus });
+        fetchTickets();
+      } catch (err) {
+        console.error('API Error updating status', err);
+      }
+    }
+  };
+
   return (
     <div className="pulse-board">
       <div className="board-header">
@@ -119,15 +134,20 @@ export function TicketList() {
           <p>Main workspace / IT Department</p>
         </div>
         <div className="board-actions">
-          <button className="btn-secondary"><Filter size={16} /> Filter</button>
+          <button className="btn-secondary"><Filter size={20} strokeWidth={1.5} /> Filter</button>
           <button className="btn-primary" onClick={() => navigate('/tickets/new')}>New Item</button>
         </div>
       </div>
 
       <div className="board-controls">
         <div className="search-bar">
-          <Search size={16} className="text-muted" />
-          <input type="text" placeholder="Search..." />
+          <Search size={20} strokeWidth={1.5} className="text-muted" />
+          <input 
+            type="text" 
+            placeholder="Search..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
       </div>
 
@@ -154,14 +174,14 @@ export function TicketList() {
               {loading ? (
                 <tr><td colSpan={6} style={{ textAlign: 'center', padding: '20px' }}>Loading...</td></tr>
               ) : (
-                tickets.map(ticket => (
+                tickets.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()) || (t as any).ticket_number?.toLowerCase().includes(searchQuery.toLowerCase())).map(ticket => (
                   <tr key={ticket.id} className="pulse-row">
                     <td className="cell-checkbox"><input type="checkbox" /></td>
                     <td className="cell-item">
                       <div className="item-title">
                         <span>{ticket.title}</span>
                         <MessageSquare 
-                          size={16} 
+                          size={20} strokeWidth={1.5}
                           className="chat-icon" 
                           onClick={() => setActiveTicketChat(ticket.id)}
                         />
@@ -172,18 +192,36 @@ export function TicketList() {
                         {ticket.assigned_to ? ticket.assigned_to.charAt(0) : 'U'}
                       </div>
                     </td>
-                    <td className="cell-status">
-                      <div className={`status-pill ${getStatusColor(ticket.status)}`}>
-                        {ticket.status}
+                    <td className="cell-status" style={{ position: 'relative' }}>
+                      <div className={`status-pill ${getStatusColor(ticket.status || 'open')}`}>
+                        {(ticket.status || 'open').toUpperCase().replace('_', ' ')}
                         <div className="corner-fold"></div>
                       </div>
+                      {user?.role === 'admin' && (
+                        <select 
+                          style={{
+                            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                            opacity: 0, cursor: 'pointer'
+                          }}
+                          value={ticket.status || 'open'}
+                          onChange={(e) => {
+                            api.patch(`/tickets.php?id=${ticket.id}`, { status: e.target.value })
+                              .then(() => fetchTickets());
+                          }}
+                        >
+                          <option value="open">Open</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="resolved">Resolved</option>
+                          <option value="closed">Closed</option>
+                        </select>
+                      )}
                     </td>
                     <td className="cell-priority">
-                      <div className={`status-pill ${getStatusColor(ticket.priority)}`}>
-                        {ticket.priority}
+                      <div className={`status-pill ${getStatusColor(ticket.priority || 'low')}`}>
+                        {(ticket.priority || 'low').toUpperCase()}
                       </div>
                     </td>
-                    <td className="cell-date">{ticket.created_at}</td>
+                    <td className="cell-date">{new Date(ticket.created_at).toLocaleDateString()}</td>
                   </tr>
                 ))
               )}
@@ -195,9 +233,25 @@ export function TicketList() {
       {/* Chat Slide-out Panel */}
       <div className={`chat-slide-panel ${activeTicketChat ? 'open' : ''}`}>
         <div className="chat-header">
-          <h3>Updates for {activeTicketChat}</h3>
+          <div>
+            <h3>Updates for {activeTicketChat}</h3>
+            {user?.role === 'admin' && (
+              <select 
+                className="form-input" 
+                style={{ marginTop: '10px', padding: '4px 8px' }}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                defaultValue=""
+              >
+                <option value="" disabled>Change Status...</option>
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+              </select>
+            )}
+          </div>
           <button className="icon-btn" onClick={() => setActiveTicketChat(null)}>
-            <X size={20} />
+            <X size={20} strokeWidth={1.5} />
           </button>
         </div>
         <div className="chat-content">
@@ -227,7 +281,7 @@ export function TicketList() {
             onChange={(e) => setNewComment(e.target.value)}
           ></textarea>
           <button className="btn-primary send-btn" onClick={handleSendComment}>
-            <Send size={16} /> Send
+            <Send size={20} strokeWidth={1.5} /> Send
           </button>
         </div>
       </div>

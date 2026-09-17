@@ -2,11 +2,18 @@
 // config/db.php
 
 class Database {
-    private $host = "localhost";
-    private $db_name = "minimines_helpdesk";
-    private $username = "root";
-    private $password = ""; // Default XAMPP/WAMP empty password
+    private $host;
+    private $db_name;
+    private $username;
+    private $password;
     public $conn;
+
+    public function __construct() {
+        $this->host = getenv('DB_HOST') ?: 'localhost';
+        $this->db_name = getenv('DB_NAME') ?: 'minimines_helpdesk';
+        $this->username = getenv('DB_USER') ?: 'root';
+        $this->password = getenv('DB_PASS') !== false ? getenv('DB_PASS') : '';
+    }
 
     public function getConnection() {
         $this->conn = null;
