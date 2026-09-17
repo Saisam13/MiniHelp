@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// The system informed us the API is at http://localhost:8000/api
+// Using relative path so Vite proxy (dev) or Nginx proxy (prod) handles it
 export const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },

@@ -81,24 +81,6 @@ export function Login() {
           </form>
         </div>
       </div>
-      <div className="login-right">
-        <div className="login-showcase">
-          <div className="showcase-content glass">
-            <h2>Streamline your support</h2>
-            <p>MiniHelp is the premium problem ticket management platform designed exclusively for MiniMines.</p>
-            <ul className="feature-list">
-              <li>✨ Real-time Collaboration</li>
-              <li>⚡ Lightning Fast Workflows</li>
-              <li>📊 Deep Analytics & Reporting</li>
-            </ul>
-          </div>
-          <div className="abstract-shapes">
-            <div className="shape shape-1"></div>
-            <div className="shape shape-2"></div>
-            <div className="shape shape-3"></div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
