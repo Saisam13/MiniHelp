@@ -22,9 +22,24 @@ export function CreateTicket() {
   const [priority, setPriority] = useState('low');
   const [category, setCategory] = useState('software');
   const [description, setDescription] = useState('');
+  const [dynamicFields, setDynamicFields] = useState<any[]>([]);
+  const [customValues, setCustomValues] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const navigate = useNavigate();
+
+  const handleNextStep = async () => {
+    if (!selectedDept) return;
+    try {
+      const res = await api.get(`/fields.php?department_id=${selectedDept}`);
+      if (res.data && res.data.success) {
+        setDynamicFields(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to load dynamic fields", err);
+    }
+    setStep(2);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +53,8 @@ export function CreateTicket() {
         priority,
         category,
         department_id: selectedDept,
-        creator_id: user.id
+        creator_id: user.id,
+        custom_values: customValues
       });
       if (res.data && res.data.success) {
         alert('Ticket created successfully!');
@@ -95,7 +111,7 @@ export function CreateTicket() {
               <button 
                 className="btn-primary" 
                 disabled={!selectedDept}
-                onClick={() => setStep(2)}
+                onClick={handleNextStep}
               >
                 Next Step
               </button>
@@ -153,6 +169,48 @@ export function CreateTicket() {
                   onChange={e => setDescription(e.target.value)}
                 ></textarea>
               </div>
+
+              {dynamicFields.length > 0 && (
+                <div className="dynamic-fields-section" style={{ padding: '20px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem' }}>Department Specific Details</h3>
+                  <div className="form-row" style={{ flexWrap: 'wrap' }}>
+                    {dynamicFields.map((field) => (
+                      <div className="form-group" key={field.id} style={{ minWidth: '45%' }}>
+                        <label>{field.field_label} {field.is_required ? '*' : ''}</label>
+                        {field.field_type === 'dropdown' ? (
+                          <select 
+                            className="form-input" 
+                            required={field.is_required}
+                            value={customValues[field.id] || ''}
+                            onChange={(e) => setCustomValues({...customValues, [field.id]: e.target.value})}
+                          >
+                            <option value="">Select...</option>
+                            {field.options && JSON.parse(field.options).map((opt: string) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        ) : field.field_type === 'textarea' ? (
+                          <textarea 
+                            className="form-input" 
+                            rows={3}
+                            required={field.is_required}
+                            value={customValues[field.id] || ''}
+                            onChange={(e) => setCustomValues({...customValues, [field.id]: e.target.value})}
+                          ></textarea>
+                        ) : (
+                          <input 
+                            type="text" 
+                            className="form-input" 
+                            required={field.is_required}
+                            value={customValues[field.id] || ''}
+                            onChange={(e) => setCustomValues({...customValues, [field.id]: e.target.value})}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="form-group">
                 <label>Attachments</label>

@@ -51,14 +51,60 @@ CREATE TABLE IF NOT EXISTS comments (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+-- Form Fields (Dynamic questions per department)
+CREATE TABLE IF NOT EXISTS form_fields (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    department_id INT NOT NULL,
+    field_label VARCHAR(255) NOT NULL,
+    field_type ENUM('text', 'textarea', 'dropdown') DEFAULT 'text',
+    options JSON NULL,
+    is_required BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
+);
+
+-- Ticket Custom Values (Answers to dynamic questions)
+CREATE TABLE IF NOT EXISTS ticket_custom_values (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ticket_id INT NOT NULL,
+    field_id INT NOT NULL,
+    field_value TEXT,
+    FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+    FOREIGN KEY (field_id) REFERENCES form_fields(id) ON DELETE CASCADE
+);
+
+-- System Settings (Admin configured sounds, etc.)
+CREATE TABLE IF NOT EXISTS system_settings (
+    setting_key VARCHAR(100) PRIMARY KEY,
+    setting_value TEXT NOT NULL
+);
+
 -- Insert dummy departments
-INSERT IGNORE INTO departments (name, code, description) VALUES 
-('Information Technology', 'IT', 'Computers, Access, Networks'),
-('Human Resources', 'HR', 'Payroll, Leaves, Onboarding'),
-('Finance & Accounts', 'FIN', 'Expenses, Billing, Invoices'),
-('Sales & BD', 'SALES', 'Client Issues, CRM'),
-('Purchase', 'PUR', 'Procurement, Vendor Management'),
-('Stores & Logistics', 'LOG', 'Inventory, Shipping, Tracking');
+INSERT IGNORE INTO departments (id, name, code, description) VALUES 
+(1, 'Information Technology', 'IT', 'Computers, Access, Networks'),
+(2, 'Human Resources', 'HR', 'Payroll, Leaves, Onboarding'),
+(3, 'Finance & Accounts', 'FIN', 'Expenses, Billing, Invoices'),
+(4, 'Sales & BD', 'SALES', 'Client Issues, CRM'),
+(5, 'Purchase', 'PUR', 'Procurement, Vendor Management'),
+(6, 'Stores & Logistics', 'LOG', 'Inventory, Shipping, Tracking')
+ON DUPLICATE KEY UPDATE name=VALUES(name);
+
+-- Seed Dynamic Form Fields for IT
+INSERT IGNORE INTO form_fields (id, department_id, field_label, field_type, options, is_required) VALUES
+(1, 1, 'Device Type', 'dropdown', '["Laptop", "Desktop", "Mobile", "Printer", "Other"]', TRUE),
+(2, 1, 'Operating System', 'dropdown', '["Windows", "macOS", "Linux", "iOS", "Android"]', FALSE),
+(3, 1, 'Error Message', 'textarea', NULL, FALSE);
+
+-- Seed Dynamic Form Fields for HR
+INSERT IGNORE INTO form_fields (id, department_id, field_label, field_type, options, is_required) VALUES
+(4, 2, 'Request Type', 'dropdown', '["Leave Approval", "Payroll Query", "Onboarding", "Grievance"]', TRUE),
+(5, 2, 'Employee ID', 'text', NULL, TRUE);
+
+-- Seed Default Notification Sounds
+INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES 
+('sound_low', '/notification.mp3'),
+('sound_medium', '/notification.mp3'),
+('sound_high', '/notification.mp3'),
+('sound_critical', '/notification.mp3');
 
 -- Insert default admin user (password is 'password123')
 INSERT IGNORE INTO users (name, email, password_hash, role, department_id) VALUES 

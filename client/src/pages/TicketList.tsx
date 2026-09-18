@@ -268,10 +268,28 @@ export function TicketList() {
               <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
                 {activeTicketDetails.description}
               </p>
-              <div style={{ marginTop: '16px', display: 'flex', gap: '12px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+
+              {activeTicketDetails.custom_fields && activeTicketDetails.custom_fields.length > 0 && (
+                <div style={{ marginTop: '16px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '6px' }}>
+                  <h5 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', color: 'var(--text-primary)' }}>Custom Fields</h5>
+                  {activeTicketDetails.custom_fields.map((cf: any, i: number) => (
+                    <div key={i} style={{ marginBottom: '6px', fontSize: '0.8rem' }}>
+                      <strong style={{ color: 'var(--text-secondary)' }}>{cf.field_label}: </strong> 
+                      <span style={{ color: 'var(--text-primary)' }}>{cf.field_value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                 <span><strong>Priority:</strong> {activeTicketDetails.priority?.toUpperCase()}</span>
                 <span><strong>Dept:</strong> {activeTicketDetails.department_name}</span>
                 <span><strong>Creator:</strong> {activeTicketDetails.creator_name}</span>
+                {activeTicketDetails.queue_position && (
+                  <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>
+                    <strong>Queue Position:</strong> #{activeTicketDetails.queue_position}
+                  </span>
+                )}
               </div>
             </div>
           )}

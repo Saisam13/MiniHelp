@@ -23,9 +23,27 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
 
+    let soundSettings: Record<string, string> = {
+      'sound_low': '/notification.mp3',
+      'sound_medium': '/notification.mp3',
+      'sound_high': '/notification.mp3',
+      'sound_critical': '/notification.mp3'
+    };
+
+    // Fetch latest sound settings
+    fetch('/api/settings.php')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data) {
+          soundSettings = { ...soundSettings, ...data.data };
+        }
+      }).catch(console.error);
+
     const playNotificationSound = (event: MessageEvent) => {
       if (event.data && event.data.type === 'PLAY_SOUND') {
-        const audio = new Audio('/notification.mp3');
+        const priority = event.data.priority || 'medium';
+        const soundFile = soundSettings[`sound_${priority}`] || '/notification.mp3';
+        const audio = new Audio(soundFile);
         audio.play().catch(e => console.error('Audio play failed:', e));
       }
     };

@@ -35,7 +35,10 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        client.postMessage({ type: 'PLAY_SOUND', priority: data.body.includes('Critical') || data.body.includes('High') ? 'high' : 'normal' });
+        client.postMessage({ 
+          type: 'PLAY_SOUND', 
+          priority: data.priority || (data.body.includes('Critical') || data.body.includes('High') ? 'high' : 'normal') 
+        });
       }
     })
   );

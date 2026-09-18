@@ -53,7 +53,51 @@ else if ($method === 'POST') {
             $stmt->bindParam(":content", $data->content);
             
             if($stmt->execute()) {
-                // Here we could also trigger a push notification to the ticket creator/assignee
+                // Fetch ticket details for notification
+                $tStmt = $db->prepare("SELECT t.ticket_number, t.title, t.priority, t.creator_id, t.department_id FROM tickets t WHERE t.id = :tid");
+                $tStmt->execute([":tid" => $data->ticket_id]);
+                $ticket = $tStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($ticket) {
+                    require_once '../vendor/autoload.php';
+                    $auth = [
+                        'VAPID' => [
+                            'subject' => 'mailto:admin@minimines.com',
+                            'publicKey' => 'BINJS1-br47yD9q-ytF4CQKB8m_0jmFlI0lKFdeVklUjwaJsqPNA7MsiJh-Wpj7gq-NRuHq-J0laTTf2MCrDFDI',
+                            'privateKey' => 'pESv5fwAWR-Cxf5-l8y5DiSTGsI4aHEUJarBUaIIuyM',
+                        ]
+                    ];
+                    $webPush = new \Minishlink\WebPush\WebPush($auth);
+
+                    // Notify creator or department agents based on who commented
+                    $sQuery = "SELECT p.* FROM push_subscriptions p 
+                               JOIN users u ON p.user_id = u.id 
+                               WHERE (u.department_id = :did OR u.id = :cid) AND u.id != :uid";
+                    $sStmt = $db->prepare($sQuery);
+                    $sStmt->execute([
+                        ":did" => $ticket['department_id'], 
+                        ":cid" => $ticket['creator_id'],
+                        ":uid" => $data->user_id
+                    ]);
+                    $subs = $sStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                    $payload = json_encode([
+                        "title" => "New Comment on " . $ticket['ticket_number'],
+                        "body" => "Update on: " . $ticket['title'],
+                        "url" => "/tickets",
+                        "priority" => $ticket['priority']
+                    ]);
+
+                    foreach($subs as $sub) {
+                        $subscription = \Minishlink\WebPush\Subscription::create([
+                            "endpoint" => $sub['endpoint'],
+                            "keys" => ['p256dh' => $sub['p256dh'], 'auth' => $sub['auth']],
+                        ]);
+                        $webPush->queueNotification($subscription, $payload);
+                    }
+                    foreach ($webPush->flush() as $report) {}
+                }
+
                 echo json_encode(["success" => true, "message" => "Comment added"]);
             } else {
                 http_response_code(503);
