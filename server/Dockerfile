@@ -15,9 +15,8 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 COPY . /var/www/html/
 
-# Use Composer to install dependencies safely
-RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs
-
+# Vendor is already included in the repository, no need to run composer install
+# (This avoids architecture extension mismatches during Docker build)
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
 EXPOSE 80
