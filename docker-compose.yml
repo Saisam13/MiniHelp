@@ -17,7 +17,7 @@ services:
       - ./server/setup.sql:/docker-entrypoint-initdb.d/1_setup.sql
       - ./server/update_push.sql:/docker-entrypoint-initdb.d/2_update_push.sql
 
-  backend:
+  backend-api:
     build:
       context: ./server
     restart: always
@@ -31,7 +31,7 @@ services:
     depends_on:
       - db
 
-  frontend:
+  frontend-ui:
     build:
       context: ./client
     restart: always
@@ -40,7 +40,7 @@ services:
     expose:
       - "80"
     depends_on:
-      - backend
+      - backend-api
 
 volumes:
   db_data:
