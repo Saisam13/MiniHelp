@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Activity, Clock, CheckCircle, AlertCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import { api } from '../api';
 import { useAuthStore } from '../store';
@@ -9,6 +9,9 @@ export function Dashboard() {
   const user = useAuthStore(state => state.user);
   const [stats, setStats] = useState({ open: 0, progress: 0, resolved: 0, avg: '0h' });
   const [recentTickets, setRecentTickets] = useState<any[]>([]);
+  const navigate = useNavigate();
+
+  
 
   useEffect(() => {
     // Request Notification permission
@@ -143,10 +146,10 @@ export function Dashboard() {
                   <tr><td colSpan={5} style={{textAlign: 'center', padding: '20px'}}>No tickets found.</td></tr>
                 ) : (
                   recentTickets.map((t) => (
-                    <tr key={t.id}>
+                    <tr key={t.id} onClick={() => navigate(`/tickets/${t.id}`)} style={{ cursor: 'pointer' }}>
                       <td><span className="mono ticket-id">{t.ticket_number || t.id}</span></td>
                       <td className="ticket-title">{t.title}</td>
-                      <td style={{ position: 'relative' }}>
+                      <td style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
                         <span className={`status-badge status-${(t.status || 'open').toLowerCase().replace(' ', '')}`}>
                           {(t.status || 'open').toUpperCase()}
                         </span>

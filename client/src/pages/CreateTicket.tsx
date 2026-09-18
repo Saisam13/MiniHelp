@@ -65,8 +65,10 @@ export function CreateTicket() {
         const formData = new FormData();
         formData.append('data', JSON.stringify(payload));
         formData.append('attachment', file);
+        // By setting Content-Type to undefined, Axios will automatically figure out it's FormData 
+        // and set the correct multipart boundary. We must delete the default application/json.
         res = await api.post('/tickets.php', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: { 'Content-Type': undefined }
         });
       } else {
         res = await api.post('/tickets.php', payload);
