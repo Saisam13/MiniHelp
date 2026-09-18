@@ -59,6 +59,8 @@
 .recent-tickets {
   padding: 24px;
   border-radius: 12px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .btn-secondary {
@@ -79,6 +81,9 @@
 
 .table-responsive {
   overflow-x: auto;
+  width: 100%;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tickets-table {

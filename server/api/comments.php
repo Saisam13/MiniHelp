@@ -53,49 +53,58 @@ else if ($method === 'POST') {
             $stmt->bindParam(":content", $data->content);
             
             if($stmt->execute()) {
+                $ticket_id = $data->ticket_id;
                 // Fetch ticket details for notification
-                $tStmt = $db->prepare("SELECT t.ticket_number, t.title, t.priority, t.creator_id, t.department_id FROM tickets t WHERE t.id = :tid");
-                $tStmt->execute([":tid" => $data->ticket_id]);
+                $tStmt = $db->prepare("SELECT t.ticket_number, t.title, t.priority, t.creator_id, t.department_id, t.assignee_id FROM tickets t WHERE t.id = :tid");
+                $tStmt->execute([":tid" => $ticket_id]);
                 $ticket = $tStmt->fetch(PDO::FETCH_ASSOC);
 
-                if ($ticket) {
+                // --- PUSH NOTIFICATION (BEST EFFORT) ---
+                try {
                     require_once '../vendor/autoload.php';
-                    $auth = [
-                        'VAPID' => [
-                            'subject' => 'mailto:admin@minimines.com',
-                            'publicKey' => 'BINJS1-br47yD9q-ytF4CQKB8m_0jmFlI0lKFdeVklUjwaJsqPNA7MsiJh-Wpj7gq-NRuHq-J0laTTf2MCrDFDI',
-                            'privateKey' => 'pESv5fwAWR-Cxf5-l8y5DiSTGsI4aHEUJarBUaIIuyM',
-                        ]
-                    ];
-                    $webPush = new \Minishlink\WebPush\WebPush($auth);
+                    if (class_exists('\Minishlink\WebPush\WebPush')) {
+                        $auth = [
+                            'VAPID' => [
+                                'subject' => 'mailto:admin@minimines.com',
+                                'publicKey' => 'BINJS1-br47yD9q-ytF4CQKB8m_0jmFlI0lKFdeVklUjwaJsqPNA7MsiJh-Wpj7gq-NRuHq-J0laTTf2MCrDFDI',
+                                'privateKey' => 'pESv5fwAWR-Cxf5-l8y5DiSTGsI4aHEUJarBUaIIuyM',
+                            ]
+                        ];
+                        $webPush = new \Minishlink\WebPush\WebPush($auth);
 
-                    // Notify creator or department agents based on who commented
-                    $sQuery = "SELECT p.* FROM push_subscriptions p 
-                               JOIN users u ON p.user_id = u.id 
-                               WHERE (u.department_id = :did OR u.id = :cid) AND u.id != :uid";
-                    $sStmt = $db->prepare($sQuery);
-                    $sStmt->execute([
-                        ":did" => $ticket['department_id'], 
-                        ":cid" => $ticket['creator_id'],
-                        ":uid" => $data->user_id
-                    ]);
-                    $subs = $sStmt->fetchAll(PDO::FETCH_ASSOC);
-
-                    $payload = json_encode([
-                        "title" => "New Comment on " . $ticket['ticket_number'],
-                        "body" => "Update on: " . $ticket['title'],
-                        "url" => "/tickets",
-                        "priority" => $ticket['priority']
-                    ]);
-
-                    foreach($subs as $sub) {
-                        $subscription = \Minishlink\WebPush\Subscription::create([
-                            "endpoint" => $sub['endpoint'],
-                            "keys" => ['p256dh' => $sub['p256dh'], 'auth' => $sub['auth']],
+                        // Notify assignee, creator, or department head
+                        $sQuery = "
+                            SELECT p.* FROM push_subscriptions p 
+                            JOIN users u ON p.user_id = u.id 
+                            WHERE p.user_id IN (:creator_id, :assignee_id) 
+                            AND p.user_id != :uid
+                        ";
+                        $sStmt = $db->prepare($sQuery);
+                        $sStmt->execute([
+                            ":creator_id" => $ticket['creator_id'],
+                            ":assignee_id" => $ticket['assignee_id'] ? $ticket['assignee_id'] : 0,
+                            ":uid" => $data->user_id
                         ]);
-                        $webPush->queueNotification($subscription, $payload);
+                        $subs = $sStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                        $payload = json_encode([
+                            "title" => "New Comment on " . $ticket['ticket_number'],
+                            "body" => "Update on: " . $ticket['title'],
+                            "url" => "/tickets/" . $ticket_id,
+                            "priority" => $ticket['priority']
+                        ]);
+
+                        foreach($subs as $sub) {
+                            $subscription = \Minishlink\WebPush\Subscription::create([
+                                "endpoint" => $sub['endpoint'],
+                                "keys" => ['p256dh' => $sub['p256dh'], 'auth' => $sub['auth']],
+                            ]);
+                            $webPush->queueNotification($subscription, $payload);
+                        }
+                        foreach ($webPush->flush() as $report) {}
                     }
-                    foreach ($webPush->flush() as $report) {}
+                } catch (\Throwable $e) {
+                    error_log("Push Notification Error (Comments): " . $e->getMessage());
                 }
 
                 echo json_encode(["success" => true, "message" => "Comment added"]);

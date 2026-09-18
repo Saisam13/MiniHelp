@@ -161,14 +161,27 @@ else if ($method === 'POST') {
                 $fileName = time() . '_' . basename($_FILES['attachment']['name']);
                 $targetPath = $uploadDir . $fileName;
                 
-                // Compress Image
-                $fileType = mime_content_type($_FILES['attachment']['tmp_name']);
-                if (in_array($fileType, ['image/jpeg', 'image/png'])) {
-                    $image = $fileType === 'image/jpeg' ? imagecreatefromjpeg($_FILES['attachment']['tmp_name']) : imagecreatefrompng($_FILES['attachment']['tmp_name']);
-                    // Save compressed jpeg (70% quality)
-                    imagejpeg($image, $targetPath, 70);
-                    imagedestroy($image);
-                } else {
+                // Compress Image safely
+                try {
+                    $fileType = isset($_FILES['attachment']['type']) ? $_FILES['attachment']['type'] : 'application/octet-stream';
+                    if (function_exists('mime_content_type')) {
+                        $fileType = mime_content_type($_FILES['attachment']['tmp_name']);
+                    }
+                    
+                    if (extension_loaded('gd') && in_array($fileType, ['image/jpeg', 'image/png'])) {
+                        $image = $fileType === 'image/jpeg' ? imagecreatefromjpeg($_FILES['attachment']['tmp_name']) : imagecreatefrompng($_FILES['attachment']['tmp_name']);
+                        if ($image !== false) {
+                            // Save compressed jpeg (70% quality)
+                            imagejpeg($image, $targetPath, 70);
+                            imagedestroy($image);
+                        } else {
+                            move_uploaded_file($_FILES['attachment']['tmp_name'], $targetPath);
+                        }
+                    } else {
+                        move_uploaded_file($_FILES['attachment']['tmp_name'], $targetPath);
+                    }
+                } catch (\Throwable $e) {
+                    // Fallback if anything fails
                     move_uploaded_file($_FILES['attachment']['tmp_name'], $targetPath);
                 }
                 
@@ -180,36 +193,50 @@ else if ($method === 'POST') {
             $db->commit();
             
             // --- TRIGGER WEB PUSH NOTIFICATION ---
-            require_once '../vendor/autoload.php';
-            $auth = [
-                'VAPID' => [
-                    'subject' => 'mailto:admin@minimines.com',
-                    'publicKey' => 'BINJS1-br47yD9q-ytF4CQKB8m_0jmFlI0lKFdeVklUjwaJsqPNA7MsiJh-Wpj7gq-NRuHq-J0laTTf2MCrDFDI',
-                    'privateKey' => 'pESv5fwAWR-Cxf5-l8y5DiSTGsI4aHEUJarBUaIIuyM',
-                ]
-            ];
-            $webPush = new \Minishlink\WebPush\WebPush($auth);
-            
-            $sQuery = "SELECT p.* FROM push_subscriptions p JOIN users u ON p.user_id = u.id WHERE u.department_id = :did";
-            $sStmt = $db->prepare($sQuery);
-            $sStmt->execute([":did" => $data['department_id']]);
-            $subs = $sStmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $payload = json_encode([
-                "title" => "New Ticket: " . $ticket_number,
-                "body" => "Priority: " . ucfirst($priority) . "\n" . $data['title'],
-                "url" => "/tickets/" . $last_id,
-                "priority" => $priority
-            ]);
-            
-            foreach($subs as $sub) {
-                $subscription = \Minishlink\WebPush\Subscription::create([
-                    "endpoint" => $sub['endpoint'],
-                    "keys" => ['p256dh' => $sub['p256dh'], 'auth' => $sub['auth']],
-                ]);
-                $webPush->queueNotification($subscription, $payload);
+            try {
+                if (file_exists('../vendor/autoload.php')) {
+                    require_once '../vendor/autoload.php';
+                    $auth = [
+                        'VAPID' => [
+                            'subject' => 'mailto:admin@minimines.com',
+                            'publicKey' => 'BINJS1-br47yD9q-ytF4CQKB8m_0jmFlI0lKFdeVklUjwaJsqPNA7MsiJh-Wpj7gq-NRuHq-J0laTTf2MCrDFDI',
+                            'privateKey' => 'pESv5fwAWR-Cxf5-l8y5DiSTGsI4aHEUJarBUaIIuyM',
+                        ]
+                    ];
+                    
+                    if (class_exists('\Minishlink\WebPush\WebPush')) {
+                        $webPush = new \Minishlink\WebPush\WebPush($auth);
+                        
+                        // Ignore errors if table is missing or query fails
+                        $sQuery = "SELECT p.* FROM push_subscriptions p JOIN users u ON p.user_id = u.id WHERE u.department_id = :did";
+                        $sStmt = $db->prepare($sQuery);
+                        $sStmt->execute([":did" => $data['department_id']]);
+                        $subs = $sStmt->fetchAll(PDO::FETCH_ASSOC);
+                        
+                        $payload = json_encode([
+                            "title" => "New Ticket: " . $ticket_number,
+                            "body" => "Priority: " . ucfirst($priority) . "\n" . $data['title'],
+                            "url" => "/tickets/" . $last_id,
+                            "priority" => $priority // Will be used by frontend for specific sounds
+                        ]);
+                        
+                        foreach ($subs as $sub) {
+                            $subscription = \Minishlink\WebPush\Subscription::create([
+                                'endpoint' => $sub['endpoint'],
+                                'keys' => [
+                                    'p256dh' => $sub['p256dh'],
+                                    'auth' => $sub['auth']
+                                ],
+                            ]);
+                            $webPush->sendOneNotification($subscription, $payload);
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Silently ignore push notification errors (e.g. table not found or library missing)
+                // The ticket was already successfully created and committed.
+                error_log("Push Notification Error: " . $e->getMessage());
             }
-            foreach ($webPush->flush() as $report) {}
             // -------------------------------------
             
             echo json_encode(["success" => true, "data" => ["id" => $last_id, "ticket_number" => $ticket_number]]);

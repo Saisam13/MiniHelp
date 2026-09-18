@@ -80,6 +80,8 @@
 .board-group {
   border-radius: 8px;
   overflow: hidden;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .group-header {
@@ -108,6 +110,9 @@
 
 .pulse-table-container {
   overflow-x: auto;
+  width: 100%;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pulse-table {

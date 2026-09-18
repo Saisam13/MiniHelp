@@ -259,22 +259,24 @@ export function Settings() {
                 <h2>Departments</h2>
                 <button className="btn-primary" onClick={() => openDeptModal()}>Add Department</button>
               </div>
-              <table className="settings-table">
-                <thead><tr><th>Name</th><th>Code</th><th>Description</th><th style={{ width: '100px' }}>Actions</th></tr></thead>
-                <tbody>
-                  {loading ? <tr><td colSpan={4}>Loading...</td></tr> : departments.map(dept => (
-                    <tr key={dept.id}>
-                      <td>{dept.name}</td><td>{dept.code || 'N/A'}</td><td>{dept.description}</td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button className="icon-btn" onClick={() => openDeptModal(dept)}><Edit size={16} /></button>
-                          <button className="icon-btn text-danger" onClick={() => handleDeleteDept(dept.id)}><Trash2 size={16} color="var(--status-open)" /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="table-responsive">
+                <table className="settings-table">
+                  <thead><tr><th>Name</th><th>Code</th><th>Description</th><th style={{ width: '100px' }}>Actions</th></tr></thead>
+                  <tbody>
+                    {loading ? <tr><td colSpan={4}>Loading...</td></tr> : departments.map(dept => (
+                      <tr key={dept.id}>
+                        <td>{dept.name}</td><td>{dept.code || 'N/A'}</td><td>{dept.description}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button className="icon-btn" onClick={() => openDeptModal(dept)}><Edit size={16} /></button>
+                            <button className="icon-btn text-danger" onClick={() => handleDeleteDept(dept.id)}><Trash2 size={16} color="var(--status-open)" /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -284,24 +286,26 @@ export function Settings() {
                 <h2>Users & Roles</h2>
                 <button className="btn-primary" onClick={() => openUserModal()}>Add User</button>
               </div>
-              <table className="settings-table">
-                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department</th><th style={{ width: '100px' }}>Actions</th></tr></thead>
-                <tbody>
-                  {loading ? <tr><td colSpan={5}>Loading...</td></tr> : users.map(user => (
-                    <tr key={user.id}>
-                      <td>{user.name}</td><td>{user.email}</td>
-                      <td><span className={`role-badge role-${user.role?.toLowerCase()}`}>{user.role}</span></td>
-                      <td>{user.department || '-'}</td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button className="icon-btn" onClick={() => openUserModal(user)}><Edit size={16} /></button>
-                          <button className="icon-btn text-danger" onClick={() => handleDeleteUser(user.id)}><Trash2 size={16} color="var(--status-open)" /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="table-responsive">
+                <table className="settings-table">
+                  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department</th><th style={{ width: '100px' }}>Actions</th></tr></thead>
+                  <tbody>
+                    {loading ? <tr><td colSpan={5}>Loading...</td></tr> : users.map(user => (
+                      <tr key={user.id}>
+                        <td>{user.name}</td><td>{user.email}</td>
+                        <td><span className={`role-badge role-${user.role?.toLowerCase()}`}>{user.role}</span></td>
+                        <td>{user.department || '-'}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button className="icon-btn" onClick={() => openUserModal(user)}><Edit size={16} /></button>
+                            <button className="icon-btn text-danger" onClick={() => handleDeleteUser(user.id)}><Trash2 size={16} color="var(--status-open)" /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
