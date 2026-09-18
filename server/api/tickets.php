@@ -237,9 +237,14 @@ else if ($method === 'POST') {
                         $sStmt->execute([":did" => $data['department_id']]);
                         $subs = $sStmt->fetchAll(PDO::FETCH_ASSOC);
                         
+                        // Get Department name
+                        $dStmt = $db->prepare("SELECT name FROM departments WHERE id = ?");
+                        $dStmt->execute([$data['department_id']]);
+                        $deptName = $dStmt->fetchColumn() ?: 'System';
+                        
                         $payload = json_encode([
                             "title" => "New Ticket: " . $ticket_number,
-                            "body" => "Priority: " . ucfirst($priority) . "\n" . $data['title'],
+                            "body" => "Dept: $deptName\nPriority: " . ucfirst($priority) . "\n" . $data['title'],
                             "url" => "/tickets/" . $last_id,
                             "priority" => $priority // Will be used by frontend for specific sounds
                         ]);

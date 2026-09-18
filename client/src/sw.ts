@@ -6,6 +6,14 @@ declare let self: ServiceWorkerGlobalScope;
 // Inject manifest array here for vite-plugin-pwa
 precacheAndRoute(self.__WB_MANIFEST);
 
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener('push', (event) => {
   let data = { title: 'New Update', body: 'Something happened on MiniHelp.', url: '/' };
   

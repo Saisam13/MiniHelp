@@ -108,9 +108,14 @@ else if ($method === 'POST') {
                         ]);
                         $subs = $sStmt->fetchAll(PDO::FETCH_ASSOC);
 
+                        // Get Department name
+                        $dStmt = $db->prepare("SELECT name FROM departments WHERE id = ?");
+                        $dStmt->execute([$ticket['department_id']]);
+                        $deptName = $dStmt->fetchColumn() ?: 'System';
+                        
                         $payload = json_encode([
-                            "title" => "New Comment on " . $ticket['ticket_number'],
-                            "body" => "Update on: " . $ticket['title'],
+                            "title" => "New Comment: " . $ticket['ticket_number'],
+                            "body" => "Dept: $deptName\nFrom: " . $data->user_id . "\n" . substr($data->content, 0, 100),
                             "url" => "/tickets/" . $ticket_id,
                             "priority" => $ticket['priority']
                         ]);
