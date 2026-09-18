@@ -68,32 +68,35 @@ if ($method === 'GET') {
     }
 } 
 else if ($method === 'PATCH') {
-    // Update profile (Settings)
     $id = isset($_GET['id']) ? $_GET['id'] : null;
     $data = json_decode(file_get_contents("php://input"));
     
-    if($id && !empty($data->name)) {
+    if($id && (!empty($data->name) || !empty($data->role))) {
         try {
-            $query = "UPDATE users SET name = :name";
-            if(!empty($data->password)) {
-                $query .= ", password_hash = :pass";
-            }
-            $query .= " WHERE id = :id";
+            $query = "UPDATE users SET ";
+            $params = [":id" => $id];
+            $updates = [];
             
+            if(!empty($data->name)) { $updates[] = "name = :name"; $params[":name"] = $data->name; }
+            if(!empty($data->email)) { $updates[] = "email = :email"; $params[":email"] = $data->email; }
+            if(!empty($data->role)) { $updates[] = "role = :role"; $params[":role"] = $data->role; }
+            if(isset($data->department_id)) { 
+                $updates[] = "department_id = :did"; 
+                $params[":did"] = empty($data->department_id) ? null : $data->department_id; 
+            }
+            if(!empty($data->password)) { 
+                $updates[] = "password_hash = :pass"; 
+                $params[":pass"] = password_hash($data->password, PASSWORD_DEFAULT); 
+            }
+            
+            $query .= implode(", ", $updates) . " WHERE id = :id";
             $stmt = $db->prepare($query);
-            $stmt->bindParam(":name", $data->name);
-            $stmt->bindParam(":id", $id);
             
-            if(!empty($data->password)) {
-                $hash = password_hash($data->password, PASSWORD_DEFAULT);
-                $stmt->bindParam(":pass", $hash);
-            }
-            
-            if($stmt->execute()) {
-                echo json_encode(["success" => true, "message" => "Profile updated successfully."]);
+            if($stmt->execute($params)) {
+                echo json_encode(["success" => true, "message" => "User updated successfully."]);
             } else {
                 http_response_code(503);
-                echo json_encode(["success" => false, "error" => "Unable to update profile."]);
+                echo json_encode(["success" => false, "error" => "Unable to update user."]);
             }
         } catch(PDOException $e) {
             http_response_code(500);
@@ -135,6 +138,23 @@ else if ($method === 'POST') {
     } else {
         http_response_code(400);
         echo json_encode(["success" => false, "error" => "Incomplete data."]);
+    }
+}
+else if ($method === 'DELETE') {
+    $id = isset($_GET['id']) ? $_GET['id'] : null;
+    if ($id) {
+        try {
+            $query = "DELETE FROM users WHERE id = :id";
+            $stmt = $db->prepare($query);
+            $stmt->execute([":id" => $id]);
+            echo json_encode(["success" => true, "message" => "User deleted"]);
+        } catch(PDOException $e) {
+            http_response_code(500);
+            echo json_encode(["success" => false, "error" => $e->getMessage()]);
+        }
+    } else {
+        http_response_code(400);
+        echo json_encode(["success" => false, "error" => "Missing ID."]);
     }
 }
 else {

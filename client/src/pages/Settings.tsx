@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
 import './Settings.css';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, Edit } from 'lucide-react';
 
 interface Department {
   id: string;
@@ -16,6 +16,7 @@ interface User {
   email: string;
   role: string;
   department: string;
+  department_id?: string;
 }
 
 export function Settings() {
@@ -24,22 +25,26 @@ export function Settings() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // New User state
-  const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
-  const [newUser, setNewUser] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'employee',
-    department_id: ''
+  // User state
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [userForm, setUserForm] = useState({
+    name: '', email: '', password: '', role: 'employee', department_id: ''
   });
 
-  // New Department state
-  const [isNewDeptModalOpen, setIsNewDeptModalOpen] = useState(false);
-  const [newDept, setNewDept] = useState({
-    name: '',
-    code: '',
-    description: ''
+  // Department state
+  const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
+  const [editingDeptId, setEditingDeptId] = useState<string | null>(null);
+  const [deptForm, setDeptForm] = useState({
+    name: '', code: '', description: ''
+  });
+
+  // Notifications state
+  const [sounds, setSounds] = useState({
+    sound_low: '/notification.mp3',
+    sound_medium: '/notification.mp3',
+    sound_high: '/notification.mp3',
+    sound_critical: '/notification.mp3'
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,95 +52,147 @@ export function Settings() {
   const fetchDepts = async () => {
     try {
       const res = await api.get('/departments.php');
-      if (res.data && res.data.success) {
-        setDepartments(res.data.data);
-      }
-    } catch (err) {
-      console.error('API Error', err);
-    } finally {
-      setLoading(false);
-    }
+      if (res.data?.success) setDepartments(res.data.data);
+    } catch (err) {}
   };
 
   const fetchUsers = async () => {
     try {
       const res = await api.get('/users.php');
-      if (res.data && res.data.success) {
-        setUsers(res.data.data);
+      if (res.data?.success) setUsers(res.data.data);
+    } catch (err) {}
+  };
+
+  const fetchSounds = async () => {
+    try {
+      const res = await api.get('/settings.php');
+      if (res.data?.success && res.data.data) {
+        setSounds(prev => ({ ...prev, ...res.data.data }));
       }
-    } catch (err) {
-      console.error('API Error', err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) {}
   };
 
   useEffect(() => {
     setLoading(true);
-    fetchDepts(); // Always fetch departments to populate dropdowns
-    if (activeTab === 'users') {
-      fetchUsers();
-    } else {
-      setLoading(false);
-    }
+    fetchDepts();
+    if (activeTab === 'users') fetchUsers();
+    if (activeTab === 'notifications') fetchSounds();
+    setLoading(false);
   }, [activeTab]);
 
-  const handleCreateUser = async (e: React.FormEvent) => {
+  // ---- USER CRUD ----
+  const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const res = await api.post('/users.php', newUser);
-      if (res.data && res.data.success) {
-        setIsNewUserModalOpen(false);
-        setNewUser({ name: '', email: '', password: '', role: 'employee', department_id: '' });
-        fetchUsers();
-        alert('User added successfully!');
+      if (editingUserId) {
+        const res = await api.patch(`/users.php?id=${editingUserId}`, userForm);
+        if (res.data?.success) {
+          alert('User updated successfully!');
+          setIsUserModalOpen(false);
+          fetchUsers();
+        } else alert(res.data?.error || 'Failed to update user.');
       } else {
-        alert(res.data?.error || 'Failed to add user.');
+        const res = await api.post('/users.php', userForm);
+        if (res.data?.success) {
+          alert('User added successfully!');
+          setIsUserModalOpen(false);
+          fetchUsers();
+        } else alert(res.data?.error || 'Failed to add user.');
       }
     } catch (err: any) {
-      alert(err.response?.data?.error || err.message || 'Failed to add user.');
+      alert(err.response?.data?.error || err.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleCreateDept = async (e: React.FormEvent) => {
+  const handleDeleteUser = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    try {
+      const res = await api.delete(`/users.php?id=${id}`);
+      if (res.data?.success) fetchUsers();
+      else alert(res.data?.error || 'Failed to delete');
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const openUserModal = (user?: User) => {
+    if (user) {
+      setEditingUserId(user.id);
+      setUserForm({ name: user.name, email: user.email, password: '', role: user.role, department_id: user.department_id || '' });
+    } else {
+      setEditingUserId(null);
+      setUserForm({ name: '', email: '', password: '', role: 'employee', department_id: '' });
+    }
+    setIsUserModalOpen(true);
+  };
+
+  // ---- DEPT CRUD ----
+  const handleSaveDept = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const res = await api.post('/departments.php', newDept);
-      if (res.data && res.data.success) {
-        setIsNewDeptModalOpen(false);
-        setNewDept({ name: '', code: '', description: '' });
-        fetchDepts();
-        alert('Department created successfully!');
+      if (editingDeptId) {
+        const res = await api.patch(`/departments.php?id=${editingDeptId}`, deptForm);
+        if (res.data?.success) {
+          alert('Department updated successfully!');
+          setIsDeptModalOpen(false);
+          fetchDepts();
+        } else alert(res.data?.error || 'Failed to update department.');
       } else {
-        alert(res.data?.error || 'Failed to create department.');
+        const res = await api.post('/departments.php', deptForm);
+        if (res.data?.success) {
+          alert('Department created successfully!');
+          setIsDeptModalOpen(false);
+          fetchDepts();
+        } else alert(res.data?.error || 'Failed to create department.');
       }
     } catch (err: any) {
-      alert(err.response?.data?.error || err.message || 'Failed to create department.');
+      alert(err.response?.data?.error || err.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleDeleteDept = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this department?")) return;
+    try {
+      const res = await api.delete(`/departments.php?id=${id}`);
+      if (res.data?.success) fetchDepts();
+      else alert(res.data?.error || 'Failed to delete');
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const openDeptModal = (dept?: Department) => {
+    if (dept) {
+      setEditingDeptId(dept.id);
+      setDeptForm({ name: dept.name, code: dept.code || '', description: dept.description || '' });
+    } else {
+      setEditingDeptId(null);
+      setDeptForm({ name: '', code: '', description: '' });
+    }
+    setIsDeptModalOpen(true);
+  };
+
+  // ---- CLEANUP & SETTINGS ----
   const handleCleanup = async () => {
-    if (!window.confirm("Are you sure you want to delete all resolved and closed tickets older than 30 days? This action cannot be undone.")) return;
-    
+    if (!window.confirm("Are you sure you want to delete all resolved and closed tickets older than 30 days?")) return;
     setIsSubmitting(true);
     try {
       const res = await api.post('/cleanup.php?days=30', {});
-      if (res.data && res.data.success) {
-        alert(res.data.message || 'Cleanup completed successfully.');
-      } else {
-        alert('Cleanup failed: ' + res.data.error);
-      }
-    } catch (err: any) {
-      alert('Cleanup error: ' + (err.response?.data?.error || err.message));
-    } finally {
-      setIsSubmitting(false);
-    }
+      if (res.data?.success) alert(res.data.message);
+      else alert('Cleanup failed: ' + res.data.error);
+    } catch (err: any) { alert(err.message); } finally { setIsSubmitting(false); }
+  };
+
+  const handleSaveSounds = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const res = await api.post('/settings.php', sounds);
+      if (res.data?.success) alert('Notification sounds saved successfully!');
+      else alert('Failed to save sounds.');
+    } catch (err: any) { alert(err.message); } finally { setIsSubmitting(false); }
   };
 
   return (
@@ -151,26 +208,20 @@ export function Settings() {
             <li className={activeTab === 'general' ? 'active' : ''} onClick={() => setActiveTab('general')}>General & Data</li>
             <li className={activeTab === 'departments' ? 'active' : ''} onClick={() => setActiveTab('departments')}>Departments</li>
             <li className={activeTab === 'users' ? 'active' : ''} onClick={() => setActiveTab('users')}>Users & Roles</li>
+            <li className={activeTab === 'notifications' ? 'active' : ''} onClick={() => setActiveTab('notifications')}>Notifications</li>
           </ul>
         </div>
 
         <div className="settings-panel">
           {activeTab === 'general' && (
             <div>
-              <div className="panel-header">
-                <h2>General Settings & Cleanup</h2>
-              </div>
+              <div className="panel-header"><h2>General Settings & Cleanup</h2></div>
               <div className="settings-card" style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <h3 style={{ margin: '0 0 10px 0', color: 'var(--text-primary)' }}>Automatic Database Cleanup</h3>
                 <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)' }}>
                   To save resources, the system automatically marks resolved/closed issues for deletion after 30 days. You can manually trigger a cleanup of all old database values and file attachments right now.
                 </p>
-                <button 
-                  className="btn-primary" 
-                  style={{ backgroundColor: '#e74c3c' }} 
-                  onClick={handleCleanup}
-                  disabled={isSubmitting}
-                >
+                <button className="btn-primary" style={{ backgroundColor: '#e74c3c' }} onClick={handleCleanup} disabled={isSubmitting}>
                   <Trash2 size={18} style={{ marginRight: '8px' }} />
                   {isSubmitting ? 'Cleaning...' : 'Delete Old Closed Tickets (> 30 days)'}
                 </button>
@@ -178,33 +229,50 @@ export function Settings() {
             </div>
           )}
 
+          {activeTab === 'notifications' && (
+            <div>
+              <div className="panel-header"><h2>Custom Notification Sounds</h2></div>
+              <form onSubmit={handleSaveSounds} className="settings-card" style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)' }}>Set a custom URL or relative path (like `/notification.mp3`) for each priority level.</p>
+                
+                {['low', 'medium', 'high', 'critical'].map((priority) => (
+                  <div className="form-group" key={priority}>
+                    <label style={{ textTransform: 'capitalize' }}>{priority} Priority Sound URL</label>
+                    <input 
+                      className="form-input" 
+                      value={(sounds as any)[`sound_${priority}`]} 
+                      onChange={(e) => setSounds({...sounds, [`sound_${priority}`]: e.target.value})}
+                    />
+                  </div>
+                ))}
+
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : 'Save Sound Settings'}
+                </button>
+              </form>
+            </div>
+          )}
+
           {activeTab === 'departments' && (
             <div>
               <div className="panel-header">
                 <h2>Departments</h2>
-                <button className="btn-primary" onClick={() => setIsNewDeptModalOpen(true)}>Add Department</button>
+                <button className="btn-primary" onClick={() => openDeptModal()}>Add Department</button>
               </div>
-              
               <table className="settings-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Code</th>
-                    <th>Description</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>Name</th><th>Code</th><th>Description</th><th style={{ width: '100px' }}>Actions</th></tr></thead>
                 <tbody>
-                  {loading ? (
-                    <tr><td colSpan={3}>Loading...</td></tr>
-                  ) : (
-                    departments.map(dept => (
-                      <tr key={dept.id}>
-                        <td>{dept.name}</td>
-                        <td>{dept.code || 'N/A'}</td>
-                        <td>{dept.description}</td>
-                      </tr>
-                    ))
-                  )}
+                  {loading ? <tr><td colSpan={4}>Loading...</td></tr> : departments.map(dept => (
+                    <tr key={dept.id}>
+                      <td>{dept.name}</td><td>{dept.code || 'N/A'}</td><td>{dept.description}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button className="icon-btn" onClick={() => openDeptModal(dept)}><Edit size={16} /></button>
+                          <button className="icon-btn text-danger" onClick={() => handleDeleteDept(dept.id)}><Trash2 size={16} color="var(--status-open)" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -214,35 +282,24 @@ export function Settings() {
             <div>
               <div className="panel-header">
                 <h2>Users & Roles</h2>
-                <button className="btn-primary" onClick={() => setIsNewUserModalOpen(true)}>Add User</button>
+                <button className="btn-primary" onClick={() => openUserModal()}>Add User</button>
               </div>
-              
               <table className="settings-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Department</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department</th><th style={{ width: '100px' }}>Actions</th></tr></thead>
                 <tbody>
-                  {loading ? (
-                    <tr><td colSpan={4}>Loading...</td></tr>
-                  ) : (
-                    users.map(user => (
-                      <tr key={user.id}>
-                        <td>{user.name}</td>
-                        <td>{user.email}</td>
-                        <td>
-                          <span className={`role-badge role-${user.role?.toLowerCase()}`}>
-                            {user.role}
-                          </span>
-                        </td>
-                        <td>{user.department || '-'}</td>
-                      </tr>
-                    ))
-                  )}
+                  {loading ? <tr><td colSpan={5}>Loading...</td></tr> : users.map(user => (
+                    <tr key={user.id}>
+                      <td>{user.name}</td><td>{user.email}</td>
+                      <td><span className={`role-badge role-${user.role?.toLowerCase()}`}>{user.role}</span></td>
+                      <td>{user.department || '-'}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button className="icon-btn" onClick={() => openUserModal(user)}><Edit size={16} /></button>
+                          <button className="icon-btn text-danger" onClick={() => handleDeleteUser(user.id)}><Trash2 size={16} color="var(--status-open)" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -250,33 +307,31 @@ export function Settings() {
         </div>
       </div>
 
-      {/* New User Modal */}
-      {isNewUserModalOpen && (
+      {/* User Modal */}
+      {isUserModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content glass">
             <div className="modal-header">
-              <h2>Create New User Account</h2>
-              <button className="icon-btn" onClick={() => setIsNewUserModalOpen(false)}>
-                <X size={20} />
-              </button>
+              <h2>{editingUserId ? 'Edit User Account' : 'Create New User Account'}</h2>
+              <button className="icon-btn" onClick={() => setIsUserModalOpen(false)}><X size={20} /></button>
             </div>
-            <form onSubmit={handleCreateUser}>
+            <form onSubmit={handleSaveUser}>
               <div className="form-group">
                 <label>Full Name</label>
-                <input required className="form-input" value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} />
+                <input required className="form-input" value={userForm.name} onChange={e => setUserForm({...userForm, name: e.target.value})} />
               </div>
               <div className="form-group">
                 <label>Email Address</label>
-                <input required type="email" className="form-input" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} />
+                <input required type="email" className="form-input" value={userForm.email} onChange={e => setUserForm({...userForm, email: e.target.value})} />
               </div>
               <div className="form-group">
-                <label>Password</label>
-                <input required type="password" className="form-input" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} />
+                <label>Password {editingUserId ? '(Leave blank to keep current)' : ''}</label>
+                <input type="password" required={!editingUserId} className="form-input" value={userForm.password} onChange={e => setUserForm({...userForm, password: e.target.value})} />
               </div>
               <div className="form-row">
                 <div className="form-group">
                   <label>Role</label>
-                  <select required className="form-input" value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})}>
+                  <select required className="form-input" value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value})}>
                     <option value="employee">Employee</option>
                     <option value="agent">Agent</option>
                     <option value="dept_head">Department Head</option>
@@ -285,53 +340,45 @@ export function Settings() {
                 </div>
                 <div className="form-group">
                   <label>Department (Source of Truth)</label>
-                  <select className="form-input" value={newUser.department_id} onChange={e => setNewUser({...newUser, department_id: e.target.value})}>
+                  <select className="form-input" value={userForm.department_id} onChange={e => setUserForm({...userForm, department_id: e.target.value})}>
                     <option value="">None (Global)</option>
-                    {departments.map(d => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
+                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>
                 </div>
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={() => setIsNewUserModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? 'Creating...' : 'Create Account'}
-                </button>
+                <button type="button" className="btn-secondary" onClick={() => setIsUserModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Account'}</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* New Dept Modal */}
-      {isNewDeptModalOpen && (
+      {/* Dept Modal */}
+      {isDeptModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content glass">
             <div className="modal-header">
-              <h2>Create New Department</h2>
-              <button className="icon-btn" onClick={() => setIsNewDeptModalOpen(false)}>
-                <X size={20} />
-              </button>
+              <h2>{editingDeptId ? 'Edit Department' : 'Create New Department'}</h2>
+              <button className="icon-btn" onClick={() => setIsDeptModalOpen(false)}><X size={20} /></button>
             </div>
-            <form onSubmit={handleCreateDept}>
+            <form onSubmit={handleSaveDept}>
               <div className="form-group">
                 <label>Department Name</label>
-                <input required className="form-input" value={newDept.name} onChange={e => setNewDept({...newDept, name: e.target.value})} />
+                <input required className="form-input" value={deptForm.name} onChange={e => setDeptForm({...deptForm, name: e.target.value})} />
               </div>
               <div className="form-group">
                 <label>Department Code (e.g. IT, HR)</label>
-                <input required className="form-input" value={newDept.code} onChange={e => setNewDept({...newDept, code: e.target.value})} />
+                <input required className="form-input" value={deptForm.code} onChange={e => setDeptForm({...deptForm, code: e.target.value})} />
               </div>
               <div className="form-group">
                 <label>Description</label>
-                <textarea className="form-input" rows={3} value={newDept.description} onChange={e => setNewDept({...newDept, description: e.target.value})}></textarea>
+                <textarea className="form-input" rows={3} value={deptForm.description} onChange={e => setDeptForm({...deptForm, description: e.target.value})}></textarea>
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={() => setIsNewDeptModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? 'Creating...' : 'Create Department'}
-                </button>
+                <button type="button" className="btn-secondary" onClick={() => setIsDeptModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Department'}</button>
               </div>
             </form>
           </div>

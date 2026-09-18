@@ -49,6 +49,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         http_response_code(400);
         echo json_encode(["success" => false, "error" => "Name and code are required."]);
     }
+} else if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
+    $id = isset($_GET['id']) ? $_GET['id'] : null;
+    $data = json_decode(file_get_contents("php://input"), true);
+    if ($id && !empty($data['name']) && !empty($data['code'])) {
+        try {
+            $query = "UPDATE departments SET name = :n, code = :c, description = :d WHERE id = :id";
+            $stmt = $db->prepare($query);
+            $desc = isset($data['description']) ? $data['description'] : '';
+            $stmt->execute([":n" => $data['name'], ":c" => $data['code'], ":d" => $desc, ":id" => $id]);
+            echo json_encode(["success" => true, "message" => "Department updated"]);
+        } catch(PDOException $e) {
+            http_response_code(500);
+            echo json_encode(["success" => false, "error" => $e->getMessage()]);
+        }
+    } else {
+        http_response_code(400);
+        echo json_encode(["success" => false, "error" => "Incomplete data for update."]);
+    }
+} else if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    $id = isset($_GET['id']) ? $_GET['id'] : null;
+    if ($id) {
+        try {
+            $query = "DELETE FROM departments WHERE id = :id";
+            $stmt = $db->prepare($query);
+            $stmt->execute([":id" => $id]);
+            echo json_encode(["success" => true, "message" => "Department deleted"]);
+        } catch(PDOException $e) {
+            http_response_code(500);
+            echo json_encode(["success" => false, "error" => $e->getMessage()]);
+        }
+    } else {
+        http_response_code(400);
+        echo json_encode(["success" => false, "error" => "Missing ID."]);
+    }
 } else {
     http_response_code(405);
     echo json_encode(["success" => false, "error" => "Method not allowed"]);
