@@ -9,24 +9,32 @@ $database = new Database();
 $db = $database->getConnection();
 
 try {
-    // 1. Delete all ticket-related data
-    $db->exec("DELETE FROM ticket_activity_log");
-    $db->exec("DELETE FROM ticket_attachments");
-    $db->exec("DELETE FROM ticket_comments");
-    $db->exec("DELETE FROM notifications");
+    // 1. Delete all ticket-related data (ignore if tables don't exist yet)
+    $tablesToEmpty = [
+        "ticket_activity_log",
+        "ticket_attachments",
+        "ticket_comments",
+        "notifications",
+        "tickets",
+        "ticket_categories",
+        "ticket_custom_fields"
+    ];
+
+    foreach ($tablesToEmpty as $table) {
+        try {
+            $db->exec("DELETE FROM $table");
+        } catch (PDOException $e) {}
+    }
     
-    // 2. Delete all tickets
-    $db->exec("DELETE FROM tickets");
-    
-    // 3. Clear users' department_id so we can delete departments
-    $db->exec("UPDATE users SET department_id = NULL");
-    
-    // 4. Delete categories and custom fields
-    $db->exec("DELETE FROM ticket_categories");
-    $db->exec("DELETE FROM ticket_custom_fields");
-    
-    // 5. Delete all departments
-    $db->exec("DELETE FROM departments");
+    // 3. Clear users' department_id BEFORE deleting departments
+    try {
+        $db->exec("UPDATE users SET department_id = NULL");
+    } catch (PDOException $e) {}
+
+    // Now delete departments
+    try {
+        $db->exec("DELETE FROM departments");
+    } catch (PDOException $e) {}
     
     // 6. Re-seed default departments (Excluding Finance)
     $depts = [
