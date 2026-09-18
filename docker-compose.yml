@@ -17,6 +17,20 @@ services:
       - ./server/setup.sql:/docker-entrypoint-initdb.d/1_setup.sql
       - ./server/update_push.sql:/docker-entrypoint-initdb.d/2_update_push.sql
 
+  phpmyadmin:
+    image: phpmyadmin:latest
+    restart: always
+    environment:
+      PMA_HOST: db
+      PMA_USER: minimines_root
+      PMA_PASSWORD: minimines_root
+    labels:
+      - "traefik.enable=false"
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+
   backend-api:
     build:
       context: ./server

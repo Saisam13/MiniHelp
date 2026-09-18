@@ -23,6 +23,7 @@ export function TicketList() {
   
   // Chat slide-out state
   const [activeTicketChat, setActiveTicketChat] = useState<string | null>(null);
+  const [activeTicketDetails, setActiveTicketDetails] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
@@ -54,28 +55,40 @@ export function TicketList() {
     fetchTickets();
   }, []);
 
-  useEffect(() => {
-    if (activeTicketChat) {
-      fetchComments(activeTicketChat);
-    }
-  }, [activeTicketChat]);
-
   const fetchComments = async (ticketId: string) => {
     setChatLoading(true);
     try {
-      const res = await api.get(`/comments.php?ticket_id=${ticketId}`);
-      if (res.data && res.data.success) {
-        setComments(res.data.data);
+      const [commentsRes, ticketRes] = await Promise.all([
+        api.get(`/comments.php?ticket_id=${ticketId}`),
+        api.get(`/tickets.php?id=${ticketId}`)
+      ]);
+      
+      if (commentsRes.data && commentsRes.data.success) {
+        setComments(commentsRes.data.data);
       } else {
         setComments([]);
       }
+      
+      if (ticketRes.data && ticketRes.data.success) {
+        setActiveTicketDetails(ticketRes.data.data);
+      }
     } catch (err) {
-      console.error('API Error fetching comments', err);
+      console.error('API Error fetching details', err);
       setComments([]);
+      setActiveTicketDetails(null);
     } finally {
       setChatLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (activeTicketChat) {
+      fetchComments(activeTicketChat);
+    } else {
+      setActiveTicketDetails(null);
+      setComments([]);
+    }
+  }, [activeTicketChat]);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -249,8 +262,22 @@ export function TicketList() {
           </button>
         </div>
         <div className="chat-content">
+          {activeTicketDetails && (
+            <div className="ticket-original-details" style={{ padding: '20px', borderBottom: '1px solid var(--border)', marginBottom: '20px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', margin: '20px' }}>
+              <h4 style={{ margin: '0 0 12px 0', color: 'var(--text-primary)' }}>{activeTicketDetails.title}</h4>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
+                {activeTicketDetails.description}
+              </p>
+              <div style={{ marginTop: '16px', display: 'flex', gap: '12px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                <span><strong>Priority:</strong> {activeTicketDetails.priority?.toUpperCase()}</span>
+                <span><strong>Dept:</strong> {activeTicketDetails.department_name}</span>
+                <span><strong>Creator:</strong> {activeTicketDetails.creator_name}</span>
+              </div>
+            </div>
+          )}
+
           {chatLoading ? (
-            <div style={{ padding: '20px', textAlign: 'center' }}>Loading comments...</div>
+            <div style={{ padding: '20px', textAlign: 'center' }}>Loading details...</div>
           ) : comments.length === 0 ? (
             <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>No comments yet.</div>
           ) : (
