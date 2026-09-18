@@ -23,7 +23,8 @@ if ($method === 'GET') {
         if ($id) {
             // Get single ticket
             $query = "SELECT t.*, d.name as department_name, d.code as department_code, 
-                      u1.name as creator_name, u2.name as assignee_name 
+                      u1.name as creator_name, u2.name as assignee_name,
+                      u1.avatar_url as creator_avatar, u2.avatar_url as assignee_avatar
                       FROM tickets t 
                       LEFT JOIN departments d ON t.department_id = d.id 
                       LEFT JOIN users u1 ON t.creator_id = u1.id 
@@ -93,7 +94,8 @@ if ($method === 'GET') {
             $dept_id = isset($_GET['department_id']) ? $_GET['department_id'] : null;
             
             $query = "SELECT t.*, d.name as department_name, d.code as department_code, 
-                      u1.name as creator_name, u2.name as assignee_name 
+                      u1.name as creator_name, u2.name as assignee_name,
+                      u1.avatar_url as creator_avatar, u2.avatar_url as assignee_avatar
                       FROM tickets t 
                       LEFT JOIN departments d ON t.department_id = d.id 
                       LEFT JOIN users u1 ON t.creator_id = u1.id 

@@ -116,11 +116,15 @@ export function TicketList() {
                         <span>{ticket.title}</span>
                       </div>
                     </td>
-                    <td className="cell-person">
-                      <div className="person-avatar">
-                        {ticket.assigned_to ? ticket.assigned_to.charAt(0) : 'U'}
-                      </div>
-                    </td>
+                      <td className="cell-person">
+                        <div className="person-avatar">
+                          {ticket.assignee_avatar ? (
+                            <img src={ticket.assignee_avatar} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                          ) : (
+                            ticket.assignee_name ? ticket.assignee_name.charAt(0).toUpperCase() : 'U'
+                          )}
+                        </div>
+                      </td>
                     <td className="cell-status" style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
                       <div className={`status-pill ${getStatusColor(ticket.status || 'open')}`}>
                         {(ticket.status || 'open').toUpperCase().replace('_', ' ')}
