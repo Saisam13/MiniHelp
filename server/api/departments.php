@@ -76,7 +76,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $db->prepare("UPDATE tickets SET department_id = NULL WHERE department_id = :id")->execute([":id" => $id]);
             
             // Delete associated categories if any
-            $db->prepare("DELETE FROM ticket_categories WHERE department_id = :id")->execute([":id" => $id]);
+            try {
+                $db->prepare("DELETE FROM ticket_categories WHERE department_id = :id")->execute([":id" => $id]);
+            } catch(PDOException $e) {
+                // Ignore if table doesn't exist yet
+            }
 
             $query = "DELETE FROM departments WHERE id = :id";
             $stmt = $db->prepare($query);
