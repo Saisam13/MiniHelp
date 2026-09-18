@@ -27,14 +27,10 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'https://via.placeholder.com/192x192.png?text=MH',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'https://via.placeholder.com/512x512.png?text=MH',
-            sizes: '512x512',
-            type: 'image/png'
+            src: '/logo.png',
+            sizes: '192x192 512x512 820x616 any',
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ]
       }
