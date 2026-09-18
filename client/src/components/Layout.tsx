@@ -40,9 +40,9 @@ export function Layout() {
     <div className="layout-container">
       {/* Sidebar */}
       <aside className="sidebar glass">
-        <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src="/logo.png" alt="MiniMines" style={{ height: '32px', objectFit: 'contain' }} />
-          <span className="brand-name" style={{ fontSize: '1.1rem', fontWeight: 600 }}>Helpdesk</span>
+        <div className="sidebar-header">
+          <img src="/logo.png" alt="MiniMines" className="sidebar-logo" />
+          <span className="brand-name">Helpdesk</span>
         </div>
         
         <nav className="sidebar-nav">
@@ -87,6 +87,10 @@ export function Layout() {
       {/* Main Content Area */}
       <div className="main-wrapper">
         <header className="top-header glass">
+          <div className="mobile-logo-wrapper">
+            <img src="/logo.png" alt="MiniMines" className="mobile-logo" />
+            <span className="mobile-brand-name">Helpdesk</span>
+          </div>
           <div className="header-actions" style={{ marginLeft: 'auto' }}>
             <button className="icon-btn" onClick={toggleTheme}>
               {theme === 'dark' ? <Sun size={20} strokeWidth={1.5} /> : <Moon size={20} strokeWidth={1.5} />}
