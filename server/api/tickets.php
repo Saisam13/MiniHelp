@@ -52,6 +52,13 @@ if ($method === 'GET') {
                 $aStmt->execute();
                 $ticket['attachments'] = $aStmt->fetchAll(PDO::FETCH_ASSOC);
 
+                // Get Comments
+                $cQuery = "SELECT c.*, u.name as user_name FROM comments c LEFT JOIN users u ON c.user_id = u.id WHERE c.ticket_id = :tid ORDER BY c.created_at ASC";
+                $cStmt = $db->prepare($cQuery);
+                $cStmt->bindParam(":tid", $id);
+                $cStmt->execute();
+                $ticket['comments'] = $cStmt->fetchAll(PDO::FETCH_ASSOC);
+
                 // Get History
                 $hQuery = "SELECT h.*, u.name as user_name FROM ticket_history h LEFT JOIN users u ON h.user_id = u.id WHERE h.ticket_id = :tid ORDER BY h.created_at DESC";
                 $hStmt = $db->prepare($hQuery);
