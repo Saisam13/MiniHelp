@@ -3,7 +3,7 @@
 
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: GET, PATCH, OPTIONS");
+header("Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -65,6 +65,30 @@ if ($method === 'GET') {
     } catch(PDOException $e) {
         http_response_code(500);
         echo json_encode(["success" => false, "error" => $e->getMessage()]);
+    }
+}
+else if ($method === 'POST') {
+    $data = json_decode(file_get_contents("php://input"));
+    
+    if(!empty($data->name) && !empty($data->email) && !empty($data->password) && !empty($data->role)) {
+        try {
+            $query = "INSERT INTO users (name, email, password_hash, role, department_id) VALUES (:name, :email, :pass, :role, :did)";
+            $stmt = $db->prepare($query);
+            $stmt->execute([
+                ":name" => $data->name,
+                ":email" => $data->email,
+                ":pass" => password_hash($data->password, PASSWORD_DEFAULT),
+                ":role" => $data->role,
+                ":did" => empty($data->department_id) ? null : $data->department_id
+            ]);
+            echo json_encode(["success" => true, "message" => "User created successfully."]);
+        } catch(PDOException $e) {
+            http_response_code(503);
+            echo json_encode(["success" => false, "error" => $e->getMessage()]);
+        }
+    } else {
+        http_response_code(400);
+        echo json_encode(["success" => false, "error" => "Incomplete data."]);
     }
 } 
 else if ($method === 'PATCH') {
