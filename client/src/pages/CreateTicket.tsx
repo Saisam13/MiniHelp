@@ -125,19 +125,19 @@ export function CreateTicket() {
             <p>Which team can help you with your issue?</p>
             
             <div className="dept-grid">
-              {DEPARTMENTS.map(dept => (
-                <div 
-                  key={dept.id} 
-                  className={`dept-card ${selectedDept === dept.id ? 'selected' : ''}`}
-                  onClick={() => setSelectedDept(dept.id)}
-                >
-                  <div className="dept-icon">{dept.icon}</div>
-                  <h3>{dept.name}</h3>
-                  <p>{dept.desc}</p>
-                  {selectedDept === dept.id && <CheckCircle2 size={20} strokeWidth={1.5} className="check-icon" />}
-                </div>
-              ))}
-            </div>
+                {departments.map(dept => (
+                  <div 
+                    key={dept.id} 
+                    className={`dept-card ${selectedDept === dept.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedDept(dept.id)}
+                  >
+                    <div className="dept-icon"><Briefcase size={20} strokeWidth={1.5} /></div>
+                    <h3>{dept.name}</h3>
+                    <p>{dept.description || 'General inquiries'}</p>
+                    {selectedDept === dept.id && <CheckCircle2 size={20} strokeWidth={1.5} className="check-icon" />}
+                  </div>
+                ))}
+              </div>
 
             <div className="wizard-actions">
               <button 
