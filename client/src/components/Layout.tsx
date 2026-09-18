@@ -30,6 +30,16 @@ export function Layout() {
   useEffect(() => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 60000); // Check every minute
+    
+    // Force Service Worker Update check
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+          registration.update();
+        }
+      });
+    }
+    
     return () => clearInterval(interval);
   }, [user]);
 
