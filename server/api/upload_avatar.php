@@ -39,10 +39,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(["success" => false, "error" => "Invalid file format"]);
             exit;
         }
-        
         $fileName = 'avatar_' . $user_id . '_' . time() . '.' . $ext;
         $targetPath = $uploadDir . $fileName;
-        $dbPath = '/api/uploads/avatars/' . $fileName;
+        $dbPath = '/api/avatar.php?id=' . $user_id . '&t=' . time();
+        
+        // Delete old avatars for this user
+        $oldFiles = glob($uploadDir . 'avatar_' . $user_id . '_*.*');
+        if ($oldFiles) {
+            foreach ($oldFiles as $oldFile) {
+                @unlink($oldFile);
+            }
+        }
         
         if (move_uploaded_file($_FILES['avatar']['tmp_name'], $targetPath)) {
             try {
