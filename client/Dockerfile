@@ -1,8 +1,9 @@
 FROM node:18-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-# Force install ALL dependencies (including dev) so Vite and Tailwind exist even if NODE_ENV=production
-RUN npm install --include=dev
+# Force development mode to ensure all devDependencies (Vite) are installed
+ENV NODE_ENV=development
+RUN npm install
 COPY . .
 RUN npm run build
 
