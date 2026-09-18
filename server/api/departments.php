@@ -71,9 +71,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $id = isset($_GET['id']) ? $_GET['id'] : null;
     if ($id) {
         try {
-            // First set department_id to NULL in users and tickets to avoid foreign key constraints
+            // Check if there are tickets for this department
+            $checkStmt = $db->prepare("SELECT COUNT(*) as count FROM tickets WHERE department_id = :id");
+            $checkStmt->execute([":id" => $id]);
+            $ticketCount = $checkStmt->fetchColumn();
+            
+            if ($ticketCount > 0) {
+                http_response_code(400);
+                echo json_encode(["success" => false, "error" => "Cannot delete department: It has $ticketCount ticket(s) assigned to it. Please reassign or delete them first."]);
+                exit;
+            }
+
+            // Unassign users from this department
             $db->prepare("UPDATE users SET department_id = NULL WHERE department_id = :id")->execute([":id" => $id]);
-            $db->prepare("UPDATE tickets SET department_id = NULL WHERE department_id = :id")->execute([":id" => $id]);
             
             // Delete associated categories if any
             try {
@@ -82,13 +92,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 // Ignore if table doesn't exist yet
             }
 
+            // Delete associated custom fields if ON DELETE CASCADE wasn't set historically
+            try {
+                $db->prepare("DELETE FROM ticket_custom_fields WHERE department_id = :id")->execute([":id" => $id]);
+            } catch(PDOException $e) {}
+
             $query = "DELETE FROM departments WHERE id = :id";
             $stmt = $db->prepare($query);
             $stmt->execute([":id" => $id]);
             echo json_encode(["success" => true, "message" => "Department deleted"]);
         } catch(PDOException $e) {
             http_response_code(500);
-            echo json_encode(["success" => false, "error" => $e->getMessage()]);
+            echo json_encode(["success" => false, "error" => "Database Error: " . $e->getMessage()]);
         }
     } else {
         http_response_code(400);

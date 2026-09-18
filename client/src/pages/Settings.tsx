@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { api } from '../api';
 import './Settings.css';
 import { X, Trash2, Edit } from 'lucide-react';
@@ -158,7 +158,7 @@ export function Settings() {
       const res = await api.delete(`/users.php?id=${id}`);
       if (res.data?.success) fetchUsers();
       else alert(res.data?.error || 'Failed to delete');
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { alert(err.response?.data?.error || err.message); }
   };
 
   const openUserModal = (user?: User) => {
@@ -205,7 +205,7 @@ export function Settings() {
       const res = await api.delete(`/departments.php?id=${id}`);
       if (res.data?.success) fetchDepts();
       else alert(res.data?.error || 'Failed to delete');
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) { alert(err.response?.data?.error || err.message); }
   };
 
   const openDeptModal = (dept?: Department) => {
@@ -227,7 +227,7 @@ export function Settings() {
       const res = await api.post('/cleanup.php?days=30', {});
       if (res.data?.success) alert(res.data.message);
       else alert('Cleanup failed: ' + res.data.error);
-    } catch (err: any) { alert(err.message); } finally { setIsSubmitting(false); }
+    } catch (err: any) { alert(err.response?.data?.error || err.message); } finally { setIsSubmitting(false); }
   };
 
   const handleSaveSounds = async (e: React.FormEvent) => {
@@ -237,7 +237,7 @@ export function Settings() {
       const res = await api.post('/settings.php', sounds);
       if (res.data?.success) alert('Notification sounds saved successfully!');
       else alert('Failed to save sounds.');
-    } catch (err: any) { alert(err.message); } finally { setIsSubmitting(false); }
+    } catch (err: any) { alert(err.response?.data?.error || err.message); } finally { setIsSubmitting(false); }
   };
 
   return (
@@ -490,3 +490,4 @@ export function Settings() {
     </div>
   );
 }
+
