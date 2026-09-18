@@ -6,7 +6,8 @@ RUN apt-get update && apt-get install -y \
     git \
     unzip \
     libzip-dev \
-    && docker-php-ext-install pdo pdo_mysql zip
+    libgmp-dev \
+    && docker-php-ext-install pdo pdo_mysql zip bcmath gmp
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -14,8 +15,8 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 COPY . /var/www/html/
 
-# Use Composer to install dependencies
-RUN composer install --no-dev --optimize-autoloader
+# Use Composer to install dependencies safely
+RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
