@@ -192,6 +192,23 @@ else if ($method === 'POST') {
 
             $db->commit();
             
+            // --- IN-APP NOTIFICATIONS ---
+            try {
+                $inAppQuery = "SELECT id FROM users WHERE (department_id = :did OR role = 'admin') AND id != :creator";
+                $inAppStmt = $db->prepare($inAppQuery);
+                $inAppStmt->execute([":did" => $data['department_id'], ":creator" => $data['creator_id']]);
+                $inAppUsers = $inAppStmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                $nStmt = $db->prepare("INSERT INTO notifications (user_id, ticket_id, title, message) VALUES (?, ?, ?, ?)");
+                $nTitle = "New Ticket: " . $ticket_number;
+                $nMessage = "Priority: " . ucfirst($priority) . " - " . $data['title'];
+                foreach($inAppUsers as $uid) {
+                    $nStmt->execute([$uid, $last_id, $nTitle, $nMessage]);
+                }
+            } catch (\Throwable $e) {
+                error_log("In-App Notification Error: " . $e->getMessage());
+            }
+
             // --- TRIGGER WEB PUSH NOTIFICATION ---
             try {
                 if (file_exists('../vendor/autoload.php')) {

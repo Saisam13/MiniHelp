@@ -113,7 +113,7 @@ export function TicketDetail() {
                 <h3>Attachments</h3>
                 <div className="attachments-list">
                   {ticket.attachments.map((att: any, idx: number) => (
-                    <a key={idx} href={`/api${att.file_path}`} target="_blank" rel="noopener noreferrer" className="attachment-link">
+                    <a key={idx} href={att.file_path} target="_blank" rel="noopener noreferrer" className="attachment-link">
                       <Paperclip size={16} /> {att.file_name}
                     </a>
                   ))}

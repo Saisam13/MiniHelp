@@ -1,13 +1,58 @@
-import { useState, useEffect } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Ticket, PlusCircle, Settings, LogOut, Bell, Sun, Moon } from 'lucide-react';
 import { useAuthStore } from '../store';
+import { api } from '../api';
 import './Layout.css';
 
 export function Layout() {
   const { user, logout, theme, toggleTheme } = useAuthStore();
+  const navigate = useNavigate();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const fetchNotifications = async () => {
+    if (!user) return;
+    try {
+      const res = await api.get(`/notifications.php?user_id=${user.id}`);
+      if (res.data?.success) {
+        setNotifications(res.data.data);
+        setUnreadCount(res.data.unread_count || 0);
+      }
+    } catch (err) {}
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const handleOpenNotifications = async () => {
+    setShowDropdown(!showDropdown);
+    if (!showDropdown && unreadCount > 0 && user) {
+      try {
+        await api.patch('/notifications.php', { user_id: user.id });
+        setUnreadCount(0);
+      } catch (err) {}
+    }
+  };
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -95,9 +140,58 @@ export function Layout() {
             <button className="icon-btn" onClick={toggleTheme}>
               {theme === 'dark' ? <Sun size={20} strokeWidth={1.5} /> : <Moon size={20} strokeWidth={1.5} />}
             </button>
-            <button className="icon-btn">
-              <Bell size={20} strokeWidth={1.5} />
-            </button>
+            <div className="notification-wrapper" ref={dropdownRef} style={{ position: 'relative' }}>
+              <button className="icon-btn" onClick={handleOpenNotifications} style={{ position: 'relative' }}>
+                <Bell size={20} strokeWidth={1.5} />
+                {unreadCount > 0 && (
+                  <span className="notification-badge">{unreadCount}</span>
+                )}
+              </button>
+              
+              {showDropdown && (
+                <div className="notification-dropdown glass" style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  width: '320px',
+                  maxHeight: '400px',
+                  overflowY: 'auto',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  boxShadow: 'var(--shadow-glass)',
+                  zIndex: 1000,
+                  padding: '12px 0'
+                }}>
+                  <div style={{ padding: '0 16px 12px', borderBottom: '1px solid var(--border)', fontWeight: 600 }}>Notifications</div>
+                  {notifications.length === 0 ? (
+                    <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-tertiary)' }}>No notifications</div>
+                  ) : (
+                    notifications.map(n => (
+                      <div key={n.id} 
+                           onClick={() => { setShowDropdown(false); if(n.ticket_id) navigate(`/tickets/${n.ticket_id}`); }}
+                           style={{
+                        padding: '12px 16px',
+                        borderBottom: '1px solid var(--border)',
+                        cursor: n.ticket_id ? 'pointer' : 'default',
+                        background: n.is_read ? 'transparent' : 'rgba(0, 212, 170, 0.05)',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = n.is_read ? 'transparent' : 'rgba(0, 212, 170, 0.05)'}
+                      >
+                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>{n.title}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>{n.message}</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
+                          <span>{n.department_name || 'System'}</span>
+                          <span>{new Date(n.created_at).toLocaleString([], {hour: '2-digit', minute:'2-digit', month: 'short', day: 'numeric'})}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
             <div className="user-profile">
               <div className="avatar">{user?.name.charAt(0)}</div>
               <div className="user-info">

@@ -59,6 +59,27 @@ else if ($method === 'POST') {
                 $tStmt->execute([":tid" => $ticket_id]);
                 $ticket = $tStmt->fetch(PDO::FETCH_ASSOC);
 
+                // --- IN-APP NOTIFICATIONS ---
+                try {
+                    $inAppQuery = "SELECT id FROM users WHERE id IN (:creator_id, :assignee_id) AND id != :uid";
+                    $inAppStmt = $db->prepare($inAppQuery);
+                    $inAppStmt->execute([
+                        ":creator_id" => $ticket['creator_id'],
+                        ":assignee_id" => $ticket['assignee_id'] ? $ticket['assignee_id'] : 0,
+                        ":uid" => $data->user_id
+                    ]);
+                    $inAppUsers = $inAppStmt->fetchAll(PDO::FETCH_COLUMN);
+                    
+                    $nStmt = $db->prepare("INSERT INTO notifications (user_id, ticket_id, title, message) VALUES (?, ?, ?, ?)");
+                    $nTitle = "New Comment on " . $ticket['ticket_number'];
+                    $nMessage = "Update on: " . $ticket['title'];
+                    foreach($inAppUsers as $uid) {
+                        $nStmt->execute([$uid, $ticket_id, $nTitle, $nMessage]);
+                    }
+                } catch (\Throwable $e) {
+                    error_log("In-App Notification Error (Comments): " . $e->getMessage());
+                }
+
                 // --- PUSH NOTIFICATION (BEST EFFORT) ---
                 try {
                     require_once '../vendor/autoload.php';
