@@ -1,6 +1,9 @@
 <?php
 require_once '../config/db.php';
 
+$database = new Database();
+$pdo = $database->getConnection();
+
 header('Content-Type: application/json');
 
 try {
