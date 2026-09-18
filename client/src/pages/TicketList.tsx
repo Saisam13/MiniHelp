@@ -28,13 +28,7 @@ export function TicketList() {
   const [chatLoading, setChatLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // We will fall back to dummy data if API fails
-  const dummyTickets = [
-    { id: 'TKT-1024', title: 'Cannot access internal CRM', status: 'Working on it', priority: 'High', department_id: 'IT', created_at: 'Oct 12' },
-    { id: 'TKT-1025', title: 'Need access to Github', status: 'Done', priority: 'Medium', department_id: 'IT', created_at: 'Oct 11' },
-    { id: 'TKT-1026', title: 'Request for new software license', status: 'Working on it', priority: 'Medium', department_id: 'Finance', created_at: 'Oct 11' },
-    { id: 'TKT-1027', title: 'VPN connection dropping', status: 'Stuck', priority: 'Critical', department_id: 'IT', created_at: 'Oct 10' },
-  ];
+
 
   const fetchTickets = async () => {
     setLoading(true);

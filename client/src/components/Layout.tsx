@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Ticket, PlusCircle, Settings, LogOut, Bell, Search, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, Ticket, PlusCircle, Settings, LogOut, Bell, Sun, Moon } from 'lucide-react';
 import { useAuthStore } from '../store';
 import './Layout.css';
 
