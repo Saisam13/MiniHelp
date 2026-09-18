@@ -5,7 +5,7 @@ COPY package*.json ./
 ENV NODE_ENV=development
 RUN npm install
 COPY . .
-RUN npx vite build
+RUN npm run build
 
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
