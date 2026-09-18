@@ -45,6 +45,20 @@ if ($method === 'GET') {
                 $fStmt->execute();
                 $ticket['custom_fields'] = $fStmt->fetchAll(PDO::FETCH_ASSOC);
 
+                // Get Attachments
+                $aQuery = "SELECT * FROM ticket_attachments WHERE ticket_id = :tid";
+                $aStmt = $db->prepare($aQuery);
+                $aStmt->bindParam(":tid", $id);
+                $aStmt->execute();
+                $ticket['attachments'] = $aStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Get History
+                $hQuery = "SELECT h.*, u.name as user_name FROM ticket_history h LEFT JOIN users u ON h.user_id = u.id WHERE h.ticket_id = :tid ORDER BY h.created_at DESC";
+                $hStmt = $db->prepare($hQuery);
+                $hStmt->bindParam(":tid", $id);
+                $hStmt->execute();
+                $ticket['history'] = $hStmt->fetchAll(PDO::FETCH_ASSOC);
+
                 // Queue Position
                 if (in_array($ticket['status'], ['open', 'assigned', 'waiting'])) {
                     $qQuery = "SELECT count(*) as ahead FROM tickets 
@@ -106,7 +120,9 @@ if ($method === 'GET') {
     }
 } 
 else if ($method === 'POST') {
-    $data = json_decode(file_get_contents("php://input"), true);
+    // Check if multipart form data (with file) or raw JSON
+    $isMultipart = !empty($_POST['data']);
+    $data = $isMultipart ? json_decode($_POST['data'], true) : json_decode(file_get_contents("php://input"), true);
     
     if(!empty($data['title']) && !empty($data['description']) && !empty($data['department_id']) && !empty($data['creator_id'])) {
         try {
@@ -130,6 +146,37 @@ else if ($method === 'POST') {
                     $cvStmt->execute([":tid" => $last_id, ":fid" => $field_id, ":val" => $val]);
                 }
             }
+
+            // Log History
+            $hStmt = $db->prepare("INSERT INTO ticket_history (ticket_id, user_id, action) VALUES (:tid, :uid, 'Ticket created')");
+            $hStmt->execute([":tid" => $last_id, ":uid" => $data['creator_id']]);
+
+            // Handle Attachments
+            if (!empty($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = 'uploads/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                $fileName = time() . '_' . basename($_FILES['attachment']['name']);
+                $targetPath = $uploadDir . $fileName;
+                
+                // Compress Image
+                $fileType = mime_content_type($_FILES['attachment']['tmp_name']);
+                if (in_array($fileType, ['image/jpeg', 'image/png'])) {
+                    $image = $fileType === 'image/jpeg' ? imagecreatefromjpeg($_FILES['attachment']['tmp_name']) : imagecreatefrompng($_FILES['attachment']['tmp_name']);
+                    // Save compressed jpeg (70% quality)
+                    imagejpeg($image, $targetPath, 70);
+                    imagedestroy($image);
+                } else {
+                    move_uploaded_file($_FILES['attachment']['tmp_name'], $targetPath);
+                }
+                
+                $dbPath = '/api/uploads/' . $fileName;
+                $aStmt = $db->prepare("INSERT INTO ticket_attachments (ticket_id, user_id, file_name, file_path) VALUES (:tid, :uid, :fn, :fp)");
+                $aStmt->execute([":tid" => $last_id, ":uid" => $data['creator_id'], ":fn" => $_FILES['attachment']['name'], ":fp" => $dbPath]);
+            }
+
             $db->commit();
             
             // --- TRIGGER WEB PUSH NOTIFICATION ---
@@ -151,7 +198,7 @@ else if ($method === 'POST') {
             $payload = json_encode([
                 "title" => "New Ticket: " . $ticket_number,
                 "body" => "Priority: " . ucfirst($priority) . "\n" . $data['title'],
-                "url" => "/tickets",
+                "url" => "/tickets/" . $last_id,
                 "priority" => $priority
             ]);
             

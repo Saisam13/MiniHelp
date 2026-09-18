@@ -47,7 +47,7 @@ export function CreateTicket() {
     
     setIsSubmitting(true);
     try {
-      const res = await api.post('/tickets.php', {
+      const payload = {
         title,
         description,
         priority,
@@ -55,7 +55,23 @@ export function CreateTicket() {
         department_id: selectedDept,
         creator_id: user.id,
         custom_values: customValues
-      });
+      };
+
+      const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+      const file = fileInput?.files?.[0];
+
+      let res;
+      if (file) {
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(payload));
+        formData.append('attachment', file);
+        res = await api.post('/tickets.php', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      } else {
+        res = await api.post('/tickets.php', payload);
+      }
+
       if (res.data && res.data.success) {
         alert('Ticket created successfully!');
         navigate('/tickets');

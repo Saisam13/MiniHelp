@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
 import './Settings.css';
-import { X } from 'lucide-react';
+import { X, Trash2 } from 'lucide-react';
 
 interface Department {
   id: string;
@@ -19,7 +19,7 @@ interface User {
 }
 
 export function Settings() {
-  const [activeTab, setActiveTab] = useState('departments');
+  const [activeTab, setActiveTab] = useState('general');
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,36 +31,27 @@ export function Settings() {
     email: '',
     password: '',
     role: 'employee',
-    department: ''
+    department_id: ''
   });
+
+  // New Department state
+  const [isNewDeptModalOpen, setIsNewDeptModalOpen] = useState(false);
+  const [newDept, setNewDept] = useState({
+    name: '',
+    code: '',
+    description: ''
+  });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // SLA state
-  const [slaConfig, setSlaConfig] = useState<any[]>([]);
-  const [slaLoading, setSlaLoading] = useState(false);
-
-  const dummyDepts = [
-    { id: '1', name: 'IT Support', code: 'IT', description: 'Handles all technical issues' },
-    { id: '2', name: 'Human Resources', code: 'HR', description: 'Handles employee requests' },
-  ];
-
-  const dummyUsers = [
-    { id: '1', name: 'Alice Smith', email: 'alice@minimines.com', role: 'Admin', department: 'IT' },
-    { id: '2', name: 'Bob Jones', email: 'bob@minimines.com', role: 'Agent', department: 'HR' },
-    { id: '3', name: 'Charlie Day', email: 'charlie@minimines.com', role: 'User', department: 'Finance' },
-  ];
 
   const fetchDepts = async () => {
     try {
       const res = await api.get('/departments.php');
       if (res.data && res.data.success) {
         setDepartments(res.data.data);
-      } else {
-        setDepartments(dummyDepts);
       }
     } catch (err) {
-      console.error('API Error, using dummy data', err);
-      setDepartments(dummyDepts);
+      console.error('API Error', err);
     } finally {
       setLoading(false);
     }
@@ -71,53 +62,19 @@ export function Settings() {
       const res = await api.get('/users.php');
       if (res.data && res.data.success) {
         setUsers(res.data.data);
-      } else {
-        setUsers(dummyUsers);
       }
     } catch (err) {
-      console.error('API Error, using dummy data', err);
-      setUsers(dummyUsers);
+      console.error('API Error', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchSla = async () => {
-    setSlaLoading(true);
-    try {
-      const res = await api.get('/sla.php');
-      if (res.data && res.data.success) {
-        setSlaConfig(res.data.data);
-      } else {
-        setSlaConfig([
-          { priority: 'Low', response_time: 24, resolution_time: 72 },
-          { priority: 'Medium', response_time: 12, resolution_time: 48 },
-          { priority: 'High', response_time: 4, resolution_time: 24 },
-          { priority: 'Critical', response_time: 1, resolution_time: 4 },
-        ]);
-      }
-    } catch (err) {
-      console.error('API Error fetching SLA', err);
-      setSlaConfig([
-        { priority: 'Low', response_time: 24, resolution_time: 72 },
-        { priority: 'Medium', response_time: 12, resolution_time: 48 },
-        { priority: 'High', response_time: 4, resolution_time: 24 },
-        { priority: 'Critical', response_time: 1, resolution_time: 4 },
-      ]);
-    } finally {
-      setSlaLoading(false);
     }
   };
 
   useEffect(() => {
     setLoading(true);
-    if (activeTab === 'departments') {
-      fetchDepts();
-    } else if (activeTab === 'users') {
+    fetchDepts(); // Always fetch departments to populate dropdowns
+    if (activeTab === 'users') {
       fetchUsers();
-    } else if (activeTab === 'sla') {
-      fetchSla();
-      setLoading(false);
     } else {
       setLoading(false);
     }
@@ -127,42 +84,55 @@ export function Settings() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // Create payload strictly with name, email, password, role as requested
-      const payload = {
-        name: newUser.name,
-        email: newUser.email,
-        password: newUser.password,
-        role: newUser.role,
-        department: newUser.department
-      };
-      
-      const res = await api.post('/users.php', payload);
-      
+      const res = await api.post('/users.php', newUser);
       if (res.data && res.data.success) {
         setIsNewUserModalOpen(false);
-        setNewUser({ name: '', email: '', password: '', role: 'employee', department: '' });
+        setNewUser({ name: '', email: '', password: '', role: 'employee', department_id: '' });
         fetchUsers();
         alert('User added successfully!');
       } else {
-        console.error('API Error creating user:', res.data);
-        alert(res.data?.error || 'Failed to add user. API returned an error.');
+        alert(res.data?.error || 'Failed to add user.');
       }
     } catch (err: any) {
-      console.error('API Error creating user', err);
-      alert(err.response?.data?.error || err.message || 'Failed to add user. Check console for details.');
+      alert(err.response?.data?.error || err.message || 'Failed to add user.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleSaveSla = async () => {
+  const handleCreateDept = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsSubmitting(true);
     try {
-      await api.post('/sla.php', { rules: slaConfig });
-      alert('SLA Config saved successfully!');
-    } catch (err) {
-      console.error('API Error saving SLA', err);
-      alert('Failed to save SLA config');
+      const res = await api.post('/departments.php', newDept);
+      if (res.data && res.data.success) {
+        setIsNewDeptModalOpen(false);
+        setNewDept({ name: '', code: '', description: '' });
+        fetchDepts();
+        alert('Department created successfully!');
+      } else {
+        alert(res.data?.error || 'Failed to create department.');
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.error || err.message || 'Failed to create department.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCleanup = async () => {
+    if (!window.confirm("Are you sure you want to delete all resolved and closed tickets older than 30 days? This action cannot be undone.")) return;
+    
+    setIsSubmitting(true);
+    try {
+      const res = await api.post('/cleanup.php?days=30', {});
+      if (res.data && res.data.success) {
+        alert(res.data.message || 'Cleanup completed successfully.');
+      } else {
+        alert('Cleanup failed: ' + res.data.error);
+      }
+    } catch (err: any) {
+      alert('Cleanup error: ' + (err.response?.data?.error || err.message));
     } finally {
       setIsSubmitting(false);
     }
@@ -172,25 +142,47 @@ export function Settings() {
     <div className="settings-page">
       <div className="settings-header">
         <h1>Administration</h1>
-        <p>Manage workspaces, teams, and system configurations.</p>
+        <p>Premium workspace configuration, team management, and cleanup rules.</p>
       </div>
 
       <div className="settings-content glass">
         <div className="settings-sidebar">
           <ul className="settings-nav">
-            <li className={activeTab === 'general' ? 'active' : ''} onClick={() => setActiveTab('general')}>General</li>
+            <li className={activeTab === 'general' ? 'active' : ''} onClick={() => setActiveTab('general')}>General & Data</li>
             <li className={activeTab === 'departments' ? 'active' : ''} onClick={() => setActiveTab('departments')}>Departments</li>
             <li className={activeTab === 'users' ? 'active' : ''} onClick={() => setActiveTab('users')}>Users & Roles</li>
-            <li className={activeTab === 'sla' ? 'active' : ''} onClick={() => setActiveTab('sla')}>SLA Config</li>
           </ul>
         </div>
 
         <div className="settings-panel">
+          {activeTab === 'general' && (
+            <div>
+              <div className="panel-header">
+                <h2>General Settings & Cleanup</h2>
+              </div>
+              <div className="settings-card" style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <h3 style={{ margin: '0 0 10px 0', color: 'var(--text-primary)' }}>Automatic Database Cleanup</h3>
+                <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)' }}>
+                  To save resources, the system automatically marks resolved/closed issues for deletion after 30 days. You can manually trigger a cleanup of all old database values and file attachments right now.
+                </p>
+                <button 
+                  className="btn-primary" 
+                  style={{ backgroundColor: '#e74c3c' }} 
+                  onClick={handleCleanup}
+                  disabled={isSubmitting}
+                >
+                  <Trash2 size={18} style={{ marginRight: '8px' }} />
+                  {isSubmitting ? 'Cleaning...' : 'Delete Old Closed Tickets (> 30 days)'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'departments' && (
             <div>
               <div className="panel-header">
                 <h2>Departments</h2>
-                <button className="btn-primary">Add Department</button>
+                <button className="btn-primary" onClick={() => setIsNewDeptModalOpen(true)}>Add Department</button>
               </div>
               
               <table className="settings-table">
@@ -199,21 +191,17 @@ export function Settings() {
                     <th>Name</th>
                     <th>Code</th>
                     <th>Description</th>
-                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={4}>Loading...</td></tr>
+                    <tr><td colSpan={3}>Loading...</td></tr>
                   ) : (
                     departments.map(dept => (
                       <tr key={dept.id}>
                         <td>{dept.name}</td>
                         <td>{dept.code || 'N/A'}</td>
                         <td>{dept.description}</td>
-                        <td>
-                          <button className="btn-link">Edit</button>
-                        </td>
                       </tr>
                     ))
                   )}
@@ -236,100 +224,27 @@ export function Settings() {
                     <th>Email</th>
                     <th>Role</th>
                     <th>Department</th>
-                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={5}>Loading...</td></tr>
+                    <tr><td colSpan={4}>Loading...</td></tr>
                   ) : (
                     users.map(user => (
                       <tr key={user.id}>
                         <td>{user.name}</td>
                         <td>{user.email}</td>
                         <td>
-                          <span className={`role-badge role-${user.role.toLowerCase()}`}>
+                          <span className={`role-badge role-${user.role?.toLowerCase()}`}>
                             {user.role}
                           </span>
                         </td>
-                        <td>{user.department}</td>
-                        <td>
-                          <button className="btn-link">Edit</button>
-                        </td>
+                        <td>{user.department || '-'}</td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
-            </div>
-          )}
-
-          {activeTab === 'sla' && (
-            <div>
-              <div className="panel-header">
-                <h2>SLA Configuration</h2>
-                <button className="btn-primary" onClick={handleSaveSla} disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-              
-              <div className="sla-config-form">
-                {slaLoading ? (
-                  <p>Loading SLA rules...</p>
-                ) : (
-                  <table className="settings-table">
-                    <thead>
-                      <tr>
-                        <th>Priority</th>
-                        <th>Response Time (Hours)</th>
-                        <th>Resolution Time (Hours)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {slaConfig.map((rule, index) => (
-                        <tr key={index}>
-                          <td>
-                            <span className={`priority-badge priority-${rule.priority.toLowerCase()}`}>
-                              {rule.priority}
-                            </span>
-                          </td>
-                          <td>
-                            <input 
-                              type="number" 
-                              className="form-input" 
-                              value={rule.response_time} 
-                              onChange={(e) => {
-                                const newConfig = [...slaConfig];
-                                newConfig[index].response_time = parseInt(e.target.value) || 0;
-                                setSlaConfig(newConfig);
-                              }}
-                            />
-                          </td>
-                          <td>
-                            <input 
-                              type="number" 
-                              className="form-input" 
-                              value={rule.resolution_time} 
-                              onChange={(e) => {
-                                const newConfig = [...slaConfig];
-                                newConfig[index].resolution_time = parseInt(e.target.value) || 0;
-                                setSlaConfig(newConfig);
-                              }}
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab !== 'departments' && activeTab !== 'users' && activeTab !== 'sla' && (
-            <div className="placeholder-content">
-              <h3>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Settings</h3>
-              <p>Configuration options will appear here.</p>
             </div>
           )}
         </div>
@@ -340,75 +255,82 @@ export function Settings() {
         <div className="modal-overlay">
           <div className="modal-content glass">
             <div className="modal-header">
-              <h2>Add New User</h2>
+              <h2>Create New User Account</h2>
               <button className="icon-btn" onClick={() => setIsNewUserModalOpen(false)}>
-                <X size={20} strokeWidth={1.5} />
+                <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleCreateUser} className="modal-body">
+            <form onSubmit={handleCreateUser}>
               <div className="form-group">
-                <label>Name</label>
-                <input 
-                  type="text" 
-                  required 
-                  className="form-input"
-                  value={newUser.name}
-                  onChange={e => setNewUser({...newUser, name: e.target.value})}
-                />
+                <label>Full Name</label>
+                <input required className="form-input" value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} />
               </div>
               <div className="form-group">
-                <label>Email</label>
-                <input 
-                  type="email" 
-                  required 
-                  className="form-input"
-                  value={newUser.email}
-                  onChange={e => setNewUser({...newUser, email: e.target.value})}
-                />
+                <label>Email Address</label>
+                <input required type="email" className="form-input" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} />
               </div>
               <div className="form-group">
                 <label>Password</label>
-                <input 
-                  type="password" 
-                  required 
-                  className="form-input"
-                  value={newUser.password}
-                  onChange={e => setNewUser({...newUser, password: e.target.value})}
-                />
+                <input required type="password" className="form-input" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} />
               </div>
               <div className="form-row">
                 <div className="form-group">
                   <label>Role</label>
-                  <select 
-                    required 
-                    className="form-input"
-                    value={newUser.role}
-                    onChange={e => setNewUser({...newUser, role: e.target.value})}
-                  >
-                    <option value="employee">User</option>
+                  <select required className="form-input" value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})}>
+                    <option value="employee">Employee</option>
                     <option value="agent">Agent</option>
-                    <option value="admin">Admin</option>
                     <option value="dept_head">Department Head</option>
+                    <option value="admin">Admin</option>
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Department</label>
-                  <select 
-                    className="form-input"
-                    value={newUser.department}
-                    onChange={e => setNewUser({...newUser, department: e.target.value})}
-                  >
-                    <option value="">None</option>
-                    <option value="IT">IT Support</option>
-                    <option value="HR">Human Resources</option>
-                    <option value="Finance">Finance</option>
+                  <label>Department (Source of Truth)</label>
+                  <select className="form-input" value={newUser.department_id} onChange={e => setNewUser({...newUser, department_id: e.target.value})}>
+                    <option value="">None (Global)</option>
+                    {departments.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
-              <div className="modal-footer">
+              <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setIsNewUserModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? 'Submitting...' : 'Add User'}
+                  {isSubmitting ? 'Creating...' : 'Create Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* New Dept Modal */}
+      {isNewDeptModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content glass">
+            <div className="modal-header">
+              <h2>Create New Department</h2>
+              <button className="icon-btn" onClick={() => setIsNewDeptModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateDept}>
+              <div className="form-group">
+                <label>Department Name</label>
+                <input required className="form-input" value={newDept.name} onChange={e => setNewDept({...newDept, name: e.target.value})} />
+              </div>
+              <div className="form-group">
+                <label>Department Code (e.g. IT, HR)</label>
+                <input required className="form-input" value={newDept.code} onChange={e => setNewDept({...newDept, code: e.target.value})} />
+              </div>
+              <div className="form-group">
+                <label>Description</label>
+                <textarea className="form-input" rows={3} value={newDept.description} onChange={e => setNewDept({...newDept, description: e.target.value})}></textarea>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setIsNewDeptModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Creating...' : 'Create Department'}
                 </button>
               </div>
             </form>

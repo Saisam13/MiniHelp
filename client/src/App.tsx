@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard';
 import { CreateTicket } from './pages/CreateTicket';
 import { Kanban } from './pages/Kanban';
 import { TicketList } from './pages/TicketList';
+import { TicketDetail } from './pages/TicketDetail';
 import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
 import { useAuthStore } from './store';
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="tickets" element={<TicketList />} />
           <Route path="tickets/new" element={<CreateTicket />} />
           <Route path="tickets/kanban" element={<Kanban />} />
+          <Route path="tickets/:id" element={<TicketDetail />} />
           <Route path="settings" element={<Settings />} />
         </Route>
         

@@ -45,14 +45,17 @@ if ($method === 'GET') {
                 echo json_encode(["success" => false, "error" => "User not found"]);
             }
         } else {
-            // Get all agents (for assignment)
+            // Get all users
             $role = isset($_GET['role']) ? $_GET['role'] : null;
-            $query = "SELECT id, name, email, role, department_id FROM users";
+            $query = "SELECT u.id, u.name, u.email, u.role, u.department_id, d.name as department 
+                      FROM users u 
+                      LEFT JOIN departments d ON u.department_id = d.id";
             if($role) {
-                $query .= " WHERE role = :role";
+                $query .= " WHERE u.role = :role";
                 $stmt = $db->prepare($query);
                 $stmt->bindParam(":role", $role);
             } else {
+                $query .= " ORDER BY u.created_at DESC";
                 $stmt = $db->prepare($query);
             }
             $stmt->execute();
