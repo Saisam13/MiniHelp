@@ -71,6 +71,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $id = isset($_GET['id']) ? $_GET['id'] : null;
     if ($id) {
         try {
+            // First set department_id to NULL in users and tickets to avoid foreign key constraints
+            $db->prepare("UPDATE users SET department_id = NULL WHERE department_id = :id")->execute([":id" => $id]);
+            $db->prepare("UPDATE tickets SET department_id = NULL WHERE department_id = :id")->execute([":id" => $id]);
+            
+            // Delete associated categories if any
+            $db->prepare("DELETE FROM ticket_categories WHERE department_id = :id")->execute([":id" => $id]);
+
             $query = "DELETE FROM departments WHERE id = :id";
             $stmt = $db->prepare($query);
             $stmt->execute([":id" => $id]);

@@ -2,20 +2,18 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuthStore } from '../store';
-import { UploadCloud, CheckCircle2, Monitor, Users, Building, DollarSign } from 'lucide-react';
+import { UploadCloud, CheckCircle2, Briefcase } from 'lucide-react';
+import { useEffect } from 'react';
 import './CreateTicket.css';
 
-const DEPARTMENTS = [
-  { id: '1', name: 'IT Support', icon: <Monitor size={20} strokeWidth={1.5} />, desc: 'Hardware, software, network' },
-  { id: '2', name: 'Human Resources', icon: <Users size={20} strokeWidth={1.5} />, desc: 'Payroll, benefits, policies' },
-  { id: '3', name: 'Facilities', icon: <Building size={20} strokeWidth={1.5} />, desc: 'Building, maintenance' },
-  { id: '4', name: 'Finance', icon: <DollarSign size={20} strokeWidth={1.5} />, desc: 'Expenses, billing' }
-];
+
 
 export function CreateTicket() {
   const user = useAuthStore(state => state.user);
   const [step, setStep] = useState(1);
   const [selectedDept, setSelectedDept] = useState('');
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   
   // Form State
   const [title, setTitle] = useState('');
@@ -28,10 +26,26 @@ export function CreateTicket() {
   
   const navigate = useNavigate();
 
+  useEffect(() => {
+    api.get('/departments.php').then(res => {
+      if (res.data?.success) setDepartments(res.data.data);
+    });
+  }, []);
+
+
   const handleNextStep = async () => {
     if (!selectedDept) return;
     try {
       const res = await api.get(`/fields.php?department_id=${selectedDept}`);
+      const catRes = await api.get(`/categories.php?department_id=${selectedDept}`);
+      if (catRes.data?.success) {
+        setCategories(catRes.data.data);
+        if (catRes.data.data.length > 0) {
+          setCategory(catRes.data.data[0].name);
+        } else {
+          setCategory('General');
+        }
+      }
       if (res.data && res.data.success) {
         setDynamicFields(res.data.data);
       }
