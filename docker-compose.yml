@@ -5,6 +5,8 @@ services:
     image: mysql:8.0
     command: --default-authentication-plugin=mysql_native_password
     restart: always
+    labels:
+      - "traefik.enable=false"
     environment:
       MYSQL_ROOT_PASSWORD: minimines_root
       MYSQL_DATABASE: minimines_helpdesk
@@ -19,6 +21,8 @@ services:
     build:
       context: ./server
     restart: always
+    labels:
+      - "traefik.enable=false"
     environment:
       DB_HOST: db
       DB_NAME: minimines_helpdesk
@@ -31,6 +35,8 @@ services:
     build:
       context: ./client
     restart: always
+    labels:
+      - "traefik.enable=true"
     expose:
       - "3000"
     depends_on:
