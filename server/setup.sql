@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('admin', 'dept_head', 'agent', 'employee') DEFAULT 'employee',
     department_id INT NULL,
+    avatar_url VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

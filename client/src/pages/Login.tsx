@@ -20,8 +20,7 @@ export function Login() {
     try {
       const res = await api.post('/auth.php', { email, password });
       if (res.data && res.data.success) {
-        localStorage.setItem('minihelp_token', res.data.token);
-        login(res.data.user);
+        login(res.data.user, res.data.token);
         navigate('/');
       } else {
         setError(res.data?.error || 'Invalid credentials');

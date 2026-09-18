@@ -128,7 +128,11 @@ export function TicketDetail() {
               {ticket.comments && ticket.comments.length > 0 ? (
                 ticket.comments.map((comment: any) => (
                   <div className="comment-bubble" key={comment.id}>
-                    <div className="comment-avatar">{comment.user_name ? comment.user_name.charAt(0).toUpperCase() : 'U'}</div>
+                    {comment.avatar_url ? (
+                      <img src={comment.avatar_url} alt="Avatar" className="comment-avatar" style={{ objectFit: 'cover' }} />
+                    ) : (
+                      <div className="comment-avatar">{comment.user_name ? comment.user_name.charAt(0).toUpperCase() : 'U'}</div>
+                    )}
                     <div className="comment-content">
                       <div className="comment-meta">
                         <strong>{comment.user_name}</strong>

@@ -202,8 +202,45 @@ export function Layout() {
                 </div>
               )}
             </div>
-            <div className="user-profile">
-              <div className="avatar">{user?.name.charAt(0)}</div>
+            <div className="user-profile" style={{ cursor: 'pointer' }} onClick={() => document.getElementById('avatar-upload')?.click()} title="Change Profile Picture">
+              <input 
+                type="file" 
+                id="avatar-upload" 
+                style={{ display: 'none' }} 
+                accept="image/*"
+                onChange={async (e) => {
+                  if (e.target.files && e.target.files[0] && user) {
+                    const formData = new FormData();
+                    formData.append('avatar', e.target.files[0]);
+                    formData.append('user_id', user.id.toString());
+                    try {
+                      const res = await api.post('/upload_avatar.php', formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                      });
+                      if (res.data?.success) {
+                        // Update user store
+                        const updatedUser = { ...user, avatar_url: res.data.avatar_url };
+                        useAuthStore.getState().login(updatedUser, localStorage.getItem('minihelp_token') || '');
+                        alert("Profile picture updated!");
+                      } else {
+                        alert(res.data?.error || "Upload failed");
+                      }
+                    } catch (err) {
+                      alert("Error uploading image");
+                    }
+                  }
+                }}
+              />
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt="Avatar" className="avatar" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent-primary)' }} />
+              ) : (
+                <div className="avatar" style={{ position: 'relative' }}>
+                  {user?.name.charAt(0)}
+                  <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--bg-secondary)', borderRadius: '50%', padding: '2px' }}>
+                     <PlusCircle size={10} color="var(--accent-primary)" />
+                  </div>
+                </div>
+              )}
               <div className="user-info">
                 <span className="user-name">{user?.name}</span>
                 <span className="user-role">{user?.role}</span>
