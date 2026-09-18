@@ -206,3 +206,25 @@
   top: 40%;
   left: 20%;
 }
+
+@media (max-width: 768px) {
+  .login-container {
+    padding: 16px;
+    align-items: flex-start;
+  }
+  .login-left {
+    padding: 20px 0;
+  }
+  .login-form-wrapper {
+    padding: 32px 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  }
+  .login-form-wrapper h1 {
+    font-size: 1.5rem;
+  }
+  .login-subtitle {
+    font-size: 0.875rem;
+    margin-bottom: 24px;
+  }
+}
