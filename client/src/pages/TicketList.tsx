@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api';
 import './TicketList.css';
@@ -117,13 +117,17 @@ export function TicketList() {
                       </div>
                     </td>
                       <td className="cell-person">
-                        <div className="person-avatar" style={!ticket.assignee_name ? { background: 'transparent', border: '1px dashed var(--text-tertiary)', color: 'var(--text-tertiary)' } : {}}>
-                          {ticket.assignee_avatar ? (
-                            <img src={ticket.assignee_avatar} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                          ) : (
-                            ticket.assignee_name ? ticket.assignee_name.charAt(0).toUpperCase() : '?'
-                          )}
-                        </div>
+                        {ticket.assignee_name ? (
+                          <div className="person-avatar" title={ticket.assignee_name}>
+                            {ticket.assignee_avatar ? (
+                              <img src={ticket.assignee_avatar} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                            ) : (
+                              ticket.assignee_name.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-tertiary)', fontSize: '13px' }}>Unassigned</span>
+                        )}
                       </td>
                     <td className="cell-status" style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
                       <div className={`status-pill ${getStatusColor(ticket.status || 'open')}`}>
@@ -170,3 +174,4 @@ export function TicketList() {
     </div>
   );
 }
+
