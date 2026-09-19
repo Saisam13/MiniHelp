@@ -1,4 +1,4 @@
-.settings-page {
+﻿.settings-page {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -50,6 +50,7 @@
 .settings-panel {
   flex: 1;
   padding: 32px;
+  overflow-y: auto;
 }
 
 .panel-header {
@@ -120,3 +121,18 @@
 .role-admin { background: rgba(245, 158, 11, 0.15); color: var(--status-open); }
 .role-agent { background: rgba(59, 130, 246, 0.15); color: var(--status-progress); }
 .role-user { background: rgba(16, 185, 129, 0.15); color: var(--status-resolved); }
+
+@media (max-width: 768px) {
+  .settings-content {
+    flex-direction: column;
+  }
+  .settings-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-panel {
+    padding: 16px;
+  }
+}
+
