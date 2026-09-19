@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../api';
 import './Settings.css';
 import { X, Trash2, Edit } from 'lucide-react';
@@ -283,12 +283,47 @@ export function Settings() {
                 
                 {['low', 'medium', 'high', 'critical'].map((priority) => (
                   <div className="form-group" key={priority}>
-                    <label style={{ textTransform: 'capitalize' }}>{priority} Priority Sound URL</label>
-                    <input 
-                      className="form-input" 
-                      value={(sounds as any)[`sound_${priority}`]} 
-                      onChange={(e) => setSounds({...sounds, [`sound_${priority}`]: e.target.value})}
-                    />
+                    <label style={{ textTransform: 'capitalize' }}>{priority} Priority Sound (URL or File)</label>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <input 
+                        className="form-input" 
+                        placeholder="Current URL or Base64"
+                        value={(sounds as any)[`sound_${priority}`]?.substring(0, 50) + ((sounds as any)[`sound_${priority}`]?.length > 50 ? '...' : '')} 
+                        onChange={(e) => setSounds({...sounds, [`sound_${priority}`]: e.target.value})}
+                        style={{ flex: 1, backgroundColor: 'var(--bg-secondary)', cursor: 'not-allowed' }}
+                        title="If using a file, this will display a truncated base64 string. To reset, type a URL like /notification.mp3"
+                      />
+                      <input 
+                        type="file" 
+                        accept=".mp3,.wav,.ogg" 
+                        id={`file_${priority}`} 
+                        style={{ display: 'none' }}
+                        onChange={async (e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            const formData = new FormData();
+                            formData.append('sound', e.target.files[0]);
+                            try {
+                              const res = await api.post('/upload_sound.php', formData, {
+                                headers: { 'Content-Type': 'multipart/form-data' }
+                              });
+                              if (res.data?.success) {
+                                setSounds({...sounds, [`sound_${priority}`]: res.data.sound_url});
+                                alert('Sound file loaded! Click Save to apply.');
+                              } else {
+                                alert(res.data?.error || 'Upload failed');
+                              }
+                            } catch (err) { alert('Error uploading sound file'); }
+                          }
+                        }}
+                      />
+                      <button 
+                        type="button" 
+                        className="btn-secondary" 
+                        onClick={() => document.getElementById(`file_${priority}`)?.click()}
+                      >
+                        Upload File
+                      </button>
+                    </div>
                   </div>
                 ))}
 
@@ -490,5 +525,6 @@ export function Settings() {
     </div>
   );
 }
+
 
 

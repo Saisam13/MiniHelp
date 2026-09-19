@@ -169,7 +169,7 @@ export function Layout() {
               {theme === 'dark' ? <Sun size={20} strokeWidth={1.5} /> : <Moon size={20} strokeWidth={1.5} />}
             </button>
             <div className="notification-wrapper" ref={dropdownRef} style={{ position: 'relative' }}>
-              <button className="icon-btn" onClick={handleOpenNotifications} style={{ position: 'relative' }}>
+              <button className="icon-btn" onClick={() => { if ('Notification' in window && Notification.permission === 'default') { Notification.requestPermission(); }; handleOpenNotifications(); }} style={{ position: 'relative' }} title="Click to view notifications and enable alerts">
                 <Bell size={20} strokeWidth={1.5} />
                 {unreadCount > 0 && (
                   <span className="notification-badge">{unreadCount}</span>
@@ -297,5 +297,6 @@ export function Layout() {
     </div>
   );
 }
+
 
 
