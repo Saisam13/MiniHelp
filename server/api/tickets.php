@@ -136,6 +136,27 @@ else if ($method === 'POST') {
         if(!empty($data['title']) && !empty($data['description']) && !empty($data['department_id']) && !empty($data['creator_id'])) {
         try {
             $db->beginTransaction();
+
+            // AUTO-PRIORITY RULES ENGINE
+            $priority = isset($data['priority']) ? $data['priority'] : 'medium';
+            if (file_exists('settings.json')) {
+                $settings = json_decode(file_get_contents('settings.json'), true);
+                if (!empty($settings['rules'])) {
+                    // Fetch creator's email
+                    $cStmt = $db->prepare("SELECT email FROM users WHERE id = :id");
+                    $cStmt->execute([':id' => $data['creator_id']]);
+                    $creator_email = $cStmt->fetchColumn();
+                    
+                    if ($creator_email) {
+                        foreach ($settings['rules'] as $rule) {
+                            if (strtolower($rule['email']) === strtolower($creator_email)) {
+                                $priority = $rule['priority']; // Override priority!
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
             
             // AUTO-ASSIGN LOGIC: Find agent in this department with the least active tickets
             $agentQuery = "SELECT u.id FROM users u 
@@ -154,7 +175,6 @@ else if ($method === 'POST') {
                           priority=:priority, department_id=:dept_id, creator_id=:creator_id, 
                           assignee_id=:assignee, status='assigned'";
                 $stmt = $db->prepare($query);
-                $priority = isset($data['priority']) ? $data['priority'] : 'medium';
                 $stmt->execute([
                     ":tn" => $ticket_number, ":title" => $data['title'], ":desc" => $data['description'],
                     ":priority" => $priority, ":dept_id" => $data['department_id'], ":creator_id" => $data['creator_id'],
@@ -164,7 +184,6 @@ else if ($method === 'POST') {
                 $query = "INSERT INTO tickets SET ticket_number=:tn, title=:title, description=:desc, 
                           priority=:priority, department_id=:dept_id, creator_id=:creator_id";
                 $stmt = $db->prepare($query);
-                $priority = isset($data['priority']) ? $data['priority'] : 'medium';
                 $stmt->execute([
                     ":tn" => $ticket_number, ":title" => $data['title'], ":desc" => $data['description'],
                     ":priority" => $priority, ":dept_id" => $data['department_id'], ":creator_id" => $data['creator_id']

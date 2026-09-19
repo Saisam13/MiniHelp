@@ -45,12 +45,17 @@ export function Settings() {
     name: '', code: '', description: ''
   });
 
-  // Notifications state
-  const [sounds, setSounds] = useState({
+  // Notifications & Automation state
+  const [advancedSettings, setAdvancedSettings] = useState({
     sound_low: '/notification.mp3',
     sound_medium: '/notification.mp3',
     sound_high: '/notification.mp3',
-    sound_critical: '/notification.mp3'
+    sound_critical: '/notification.mp3',
+    sla_low: 48,
+    sla_medium: 24,
+    sla_high: 8,
+    sla_critical: 2,
+    rules: [] as any[]
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,11 +81,11 @@ export function Settings() {
     } catch (err) {}
   };
 
-  const fetchSounds = async () => {
+  const fetchAdvancedSettings = async () => {
     try {
       const res = await api.get('/settings.php');
       if (res.data?.success && res.data.data) {
-        setSounds(prev => ({ ...prev, ...res.data.data }));
+        setAdvancedSettings(prev => ({ ...prev, ...res.data.data }));
       }
     } catch (err) {}
   };
@@ -90,7 +95,7 @@ export function Settings() {
     fetchDepts();
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'categories') fetchCategories();
-    if (activeTab === 'notifications') fetchSounds();
+    if (activeTab === 'notifications' || activeTab === 'automation') fetchAdvancedSettings();
     setLoading(false);
   }, [activeTab]);
 
@@ -230,13 +235,13 @@ export function Settings() {
     } catch (err: any) { alert(err.response?.data?.error || err.message); } finally { setIsSubmitting(false); }
   };
 
-  const handleSaveSounds = async (e: React.FormEvent) => {
+  const handleSaveAdvancedSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const res = await api.post('/settings.php', sounds);
-      if (res.data?.success) alert('Notification sounds saved successfully!');
-      else alert('Failed to save sounds.');
+      const res = await api.post('/settings.php', advancedSettings);
+      if (res.data?.success) alert('Advanced settings saved successfully!');
+      else alert('Failed to save advancedSettings.');
     } catch (err: any) { alert(err.response?.data?.error || err.message); } finally { setIsSubmitting(false); }
   };
 
@@ -255,6 +260,7 @@ export function Settings() {
              <li className={activeTab === 'categories' ? 'active' : ''} onClick={() => setActiveTab('categories')}>Problem Types</li>
             <li className={activeTab === 'users' ? 'active' : ''} onClick={() => setActiveTab('users')}>Users & Roles</li>
             <li className={activeTab === 'notifications' ? 'active' : ''} onClick={() => setActiveTab('notifications')}>Notifications</li>
+            <li className={activeTab === 'automation' ? 'active' : ''} onClick={() => setActiveTab('automation')}>Automation & SLA</li>
           </ul>
         </div>
 
@@ -277,8 +283,8 @@ export function Settings() {
 
           {activeTab === 'notifications' && (
             <div>
-              <div className="panel-header"><h2>Custom Notification Sounds</h2></div>
-              <form onSubmit={handleSaveSounds} className="settings-card" style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <div className="panel-header"><h2>Custom Advanced settings</h2></div>
+              <form onSubmit={handleSaveAdvancedSettings} className="settings-card" style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)' }}>Set a custom URL or relative path (like `/notification.mp3`) for each priority level.</p>
                 
                 {['low', 'medium', 'high', 'critical'].map((priority) => (
@@ -288,8 +294,8 @@ export function Settings() {
                       <input 
                         className="form-input" 
                         placeholder="Current URL or Base64"
-                        value={(sounds as any)[`sound_${priority}`]?.substring(0, 50) + ((sounds as any)[`sound_${priority}`]?.length > 50 ? '...' : '')} 
-                        onChange={(e) => setSounds({...sounds, [`sound_${priority}`]: e.target.value})}
+                        value={(advancedSettings as any)[`sound_${priority}`]?.substring(0, 50) + ((advancedSettings as any)[`sound_${priority}`]?.length > 50 ? '...' : '')} 
+                        onChange={(e) => setAdvancedSettings({...advancedSettings, [`sound_${priority}`]: e.target.value})}
                         style={{ flex: 1, backgroundColor: 'var(--bg-secondary)', cursor: 'not-allowed' }}
                         title="If using a file, this will display a truncated base64 string. To reset, type a URL like /notification.mp3"
                       />
@@ -307,7 +313,7 @@ export function Settings() {
                                 headers: { 'Content-Type': 'multipart/form-data' }
                               });
                               if (res.data?.success) {
-                                setSounds({...sounds, [`sound_${priority}`]: res.data.sound_url});
+                                setAdvancedSettings({...advancedSettings, [`sound_${priority}`]: res.data.sound_url});
                                 alert('Sound file loaded! Click Save to apply.');
                               } else {
                                 alert(res.data?.error || 'Upload failed');
@@ -331,6 +337,85 @@ export function Settings() {
                   {isSubmitting ? 'Saving...' : 'Save Sound Settings'}
                 </button>
               </form>
+            </div>
+          )}
+
+          {activeTab === 'automation' && (
+            <div>
+              <div className="panel-header"><h2>Service Level Agreements (SLA) & Rules</h2></div>
+              <form onSubmit={handleSaveAdvancedSettings} className="settings-card" style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '20px' }}>
+                <h3 style={{ margin: '0 0 10px 0', color: 'var(--text-primary)' }}>SLA Target Response Time (Hours)</h3>
+                <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)' }}>Set the expected maximum time to resolve tickets based on their priority.</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  {['low', 'medium', 'high', 'critical'].map((priority) => (
+                    <div className="form-group" key={priority}>
+                      <label style={{ textTransform: 'capitalize' }}>{priority} Priority (Hrs)</label>
+                      <input 
+                        type="number"
+                        min="1"
+                        className="form-input" 
+                        value={(advancedSettings as any)[`sla_${priority}`]} 
+                        onChange={(e) => setAdvancedSettings({...advancedSettings, [`sla_${priority}`]: parseInt(e.target.value) || 0})}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <button type="submit" className="btn-primary" disabled={isSubmitting} style={{ marginTop: '15px' }}>
+                  {isSubmitting ? 'Saving...' : 'Save SLA Settings'}
+                </button>
+              </form>
+
+              <div className="settings-card" style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <h3 style={{ margin: '0 0 10px 0', color: 'var(--text-primary)' }}>Auto-Priority Rules</h3>
+                <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)' }}>Automatically upgrade ticket priority when created by specific users or departments. (Feature processing implementation...)</p>
+                
+                <table className="settings-table">
+                  <thead><tr><th>If Requester Email is...</th><th>Then Priority becomes...</th><th>Action</th></tr></thead>
+                  <tbody>
+                    {(advancedSettings.rules || []).map((rule: any, i: number) => (
+                      <tr key={i}>
+                        <td>{rule.email}</td>
+                        <td style={{ textTransform: 'capitalize' }}>{rule.priority}</td>
+                        <td>
+                          <button type="button" className="icon-btn text-danger" onClick={() => {
+                            const newRules = [...advancedSettings.rules];
+                            newRules.splice(i, 1);
+                            setAdvancedSettings({...advancedSettings, rules: newRules});
+                          }}><Trash2 size={16} /></button>
+                        </td>
+                      </tr>
+                    ))}
+                    <tr>
+                      <td>
+                        <input id="new_rule_email" placeholder="e.g. boss@m-mines.in" className="form-input" style={{ padding: '8px' }} />
+                      </td>
+                      <td>
+                        <select id="new_rule_priority" className="form-input" style={{ padding: '8px' }}>
+                          <option value="high">High</option>
+                          <option value="critical">Critical</option>
+                        </select>
+                      </td>
+                      <td>
+                        <button type="button" className="btn-primary" style={{ padding: '8px 12px' }} onClick={() => {
+                            const email = (document.getElementById('new_rule_email') as HTMLInputElement).value;
+                            const priority = (document.getElementById('new_rule_priority') as HTMLSelectElement).value;
+                            if (email) {
+                                setAdvancedSettings({
+                                    ...advancedSettings, 
+                                    rules: [...(advancedSettings.rules || []), { email, priority }]
+                                });
+                                (document.getElementById('new_rule_email') as HTMLInputElement).value = '';
+                            }
+                        }}>Add Rule</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                
+                <div style={{ marginTop: '15px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                  * Remember to click <b>Save SLA Settings</b> above to persist rule changes.
+                </div>
+              </div>
             </div>
           )}
 
@@ -525,6 +610,10 @@ export function Settings() {
     </div>
   );
 }
+
+
+
+
 
 
 
