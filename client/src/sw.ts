@@ -25,7 +25,7 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  const options = {
+  const options: NotificationOptions = {
     body: data.body,
     icon: '/logo.png',
     badge: '/logo.png',
@@ -34,6 +34,7 @@ self.addEventListener('push', (event) => {
       url: data.url,
       priority: data.priority
     },
+    silent: false, // Force OS default sound
     requireInteraction: true
   };
 

@@ -137,22 +137,27 @@ else if ($method === 'POST') {
         try {
             $db->beginTransaction();
 
+            // 0. Validate Creator Exists (prevent foreign key constraint failure on wiped DB)
+            $cStmt = $db->prepare("SELECT email FROM users WHERE id = :id");
+            $cStmt->execute([':id' => $data['creator_id']]);
+            $creator_email = $cStmt->fetchColumn();
+
+            if (!$creator_email) {
+                $db->rollBack();
+                http_response_code(401);
+                echo json_encode(["success" => false, "error" => "Session expired or user deleted. Please log out and log in again."]);
+                exit();
+            }
+
             // AUTO-PRIORITY RULES ENGINE
             $priority = isset($data['priority']) ? $data['priority'] : 'medium';
             if (file_exists('settings.json')) {
                 $settings = json_decode(file_get_contents('settings.json'), true);
                 if (!empty($settings['rules'])) {
-                    // Fetch creator's email
-                    $cStmt = $db->prepare("SELECT email FROM users WHERE id = :id");
-                    $cStmt->execute([':id' => $data['creator_id']]);
-                    $creator_email = $cStmt->fetchColumn();
-                    
-                    if ($creator_email) {
-                        foreach ($settings['rules'] as $rule) {
-                            if (strtolower($rule['email']) === strtolower($creator_email)) {
-                                $priority = $rule['priority']; // Override priority!
-                                break;
-                            }
+                    foreach ($settings['rules'] as $rule) {
+                        if (strtolower($rule['email']) === strtolower($creator_email)) {
+                            $priority = $rule['priority']; // Override priority!
+                            break;
                         }
                     }
                 }
@@ -304,8 +309,9 @@ else if ($method === 'POST') {
                                     'auth' => $sub['auth']
                                 ],
                             ]);
-                            $webPush->sendOneNotification($subscription, $payload);
+                            $webPush->queueNotification($subscription, $payload);
                         }
+                        foreach ($webPush->flush() as $report) {}
                     }
                 }
             } catch (\Throwable $e) {

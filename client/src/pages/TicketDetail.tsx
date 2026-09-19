@@ -63,7 +63,7 @@ export function TicketDetail() {
       <div className="ticket-detail-header">
         <Link to="/tickets" className="back-link"><ArrowLeft size={18} /> Back to Tickets</Link>
         <div className="header-actions">
-          {(user?.role === 'admin' || user?.role === 'dept_head') && (
+          {(user?.role === 'admin' || user?.role === 'dept_head' || user?.role === 'agent') && (
             <select 
               className="status-selector" 
               value={ticket.status}
