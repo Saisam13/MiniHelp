@@ -1,5 +1,5 @@
-<?php
-include_once 'config/db.php';
+﻿<?php
+include_once '../config/db.php';
 $database = new Database();
 $db = $database->getConnection();
 
@@ -66,3 +66,4 @@ try {
     echo "Error: " . $e->getMessage();
 }
 ?>
+
