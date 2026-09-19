@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuthStore } from '../store';
@@ -90,7 +90,8 @@ export function CreateTicket() {
 
       if (res.data && res.data.success) {
         alert('Ticket created successfully!');
-        navigate('/tickets');
+        window.dispatchEvent(new CustomEvent('refresh-notifications'));
+          navigate('/tickets');
       } else {
         alert('Error: ' + res.data.error);
       }
@@ -282,3 +283,4 @@ export function CreateTicket() {
     </div>
   );
 }
+

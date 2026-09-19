@@ -203,7 +203,7 @@ else if ($method === 'POST') {
             
             // --- IN-APP NOTIFICATIONS ---
             try {
-                $inAppQuery = "SELECT id FROM users WHERE (department_id = :did OR role = 'admin') AND id != :creator";
+                $inAppQuery = "SELECT id FROM users WHERE department_id = :did OR role = 'admin' OR id = :creator";
                 $inAppStmt = $db->prepare($inAppQuery);
                 $inAppStmt->execute([":did" => $data['department_id'], ":creator" => $data['creator_id']]);
                 $inAppUsers = $inAppStmt->fetchAll(PDO::FETCH_COLUMN);

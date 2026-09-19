@@ -40,9 +40,10 @@ export default function App() {
         }
       }).catch(console.error);
 
-    const playNotificationSound = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'PLAY_SOUND') {
-        const priority = event.data.priority || 'medium';
+    const playNotificationSound = (event: any) => {
+      const data = event.data || event.detail;
+      if (data && data.type === 'PLAY_SOUND') {
+        const priority = data.priority || 'medium';
         const soundFile = soundSettings[`sound_${priority}`] || '/notification.mp3';
         const audio = new Audio(soundFile);
         audio.play().catch(e => console.error('Audio play failed:', e));
@@ -50,7 +51,12 @@ export default function App() {
     };
 
     navigator.serviceWorker?.addEventListener('message', playNotificationSound);
-    return () => navigator.serviceWorker?.removeEventListener('message', playNotificationSound);
+    window.addEventListener('play-sound', playNotificationSound as EventListener);
+    
+    return () => {
+      navigator.serviceWorker?.removeEventListener('message', playNotificationSound);
+      window.removeEventListener('play-sound', playNotificationSound as EventListener);
+    };
   }, [theme]);
 
   return (
@@ -72,3 +78,5 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
+

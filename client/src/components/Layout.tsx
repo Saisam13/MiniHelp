@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Ticket, PlusCircle, Settings, LogOut, Bell, Sun, Moon } from 'lucide-react';
 import { useAuthStore } from '../store';
@@ -21,8 +21,20 @@ export function Layout() {
     try {
       const res = await api.get(`/notifications.php?user_id=${user.id}`);
       if (res.data?.success) {
+        const newUnread = res.data.unread_count || 0;
+        
+        // Play sound if unread count increases
+        setUnreadCount(prev => {
+          if (newUnread > prev && prev !== -1) { // use -1 trick if we want to avoid initial load sound, but here we can just do if prev > 0 or if we use a ref.
+            // Dispatch a play sound event for App.tsx to handle, or play directly
+            window.dispatchEvent(new CustomEvent('play-sound', {
+                detail: { type: 'PLAY_SOUND', priority: 'medium' }
+            }));
+          }
+          return newUnread;
+        });
+        
         setNotifications(res.data.data);
-        setUnreadCount(res.data.unread_count || 0);
       }
     } catch (err) {}
   };
@@ -31,6 +43,9 @@ export function Layout() {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 60000); // Check every minute
     
+    const handleRefresh = () => fetchNotifications();
+    window.addEventListener('refresh-notifications', handleRefresh);
+
     // Force Service Worker Update check
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(registrations => {
@@ -40,7 +55,10 @@ export function Layout() {
       });
     }
     
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('refresh-notifications', handleRefresh);
+    };
   }, [user]);
 
   const handleOpenNotifications = async () => {
@@ -279,3 +297,4 @@ export function Layout() {
     </div>
   );
 }
+
