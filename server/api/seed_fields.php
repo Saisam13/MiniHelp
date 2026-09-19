@@ -1,11 +1,9 @@
-﻿<?php
+<?php
 include_once '../config/db.php';
 $database = new Database();
 $db = $database->getConnection();
 
 try {
-    $db
-
     // 1. Wipe existing fields to avoid orphans/duplicates
     $db->exec("DELETE FROM form_fields");
     $db->exec("ALTER TABLE form_fields AUTO_INCREMENT = 1");
@@ -60,5 +58,6 @@ try {
     echo json_encode(["success" => false, "error" => $e->getMessage()]);
 }
 ?>
+
 
 
