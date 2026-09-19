@@ -363,7 +363,7 @@ export function Settings() {
                     {loading ? <tr><td colSpan={5}>Loading...</td></tr> : users.map(user => (
                       <tr key={user.id}>
                         <td>{user.name}</td><td>{user.email}</td>
-                        <td><span className={`role-badge role-${user.role?.toLowerCase()}`}>{user.role}</span></td>
+                        <td><span className={`role-badge role-${user.role?.toLowerCase()}`}>{user.role === 'agent' ? 'Specialist' : user.role === 'dept_head' ? 'Department Head' : user.role}</span></td>
                         <td>{user.department || '-'}</td>
                         <td>
                           <div style={{ display: 'flex', gap: '8px' }}>
@@ -436,7 +436,7 @@ export function Settings() {
                   <label>Role</label>
                   <select required className="form-input" value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value})}>
                     <option value="employee">Employee</option>
-                    <option value="agent">Agent</option>
+                    <option value="agent">Specialist</option>
                     <option value="dept_head">Department Head</option>
                     <option value="admin">Admin</option>
                   </select>
@@ -490,4 +490,5 @@ export function Settings() {
     </div>
   );
 }
+
 

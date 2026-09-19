@@ -261,7 +261,7 @@ export function Layout() {
               )}
               <div className="user-info">
                 <span className="user-name">{user?.name}</span>
-                <span className="user-role">{user?.role}</span>
+                <span className="user-role">{user?.role === 'agent' ? 'Specialist' : user?.role === 'dept_head' ? 'Department Head' : user?.role}</span>
               </div>
             </div>
             <button className="icon-btn logout-btn" onClick={logout}>
@@ -297,4 +297,5 @@ export function Layout() {
     </div>
   );
 }
+
 
