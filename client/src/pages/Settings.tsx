@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { api } from '../api';
 import './Settings.css';
 import { X, Trash2, Edit } from 'lucide-react';
@@ -81,6 +81,22 @@ export function Settings() {
     } catch (err) {}
   };
 
+    // Fields state
+  const [fields, setFields] = useState<any[]>([]);
+  const [selectedDeptForFields, setSelectedDeptForFields] = useState<string>('');
+  const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
+  const [fieldForm, setFieldForm] = useState({
+    field_label: '', field_type: 'text', is_required: 0, options: ''
+  });
+
+  const fetchFields = async (deptId: string) => {
+    try {
+      const res = await api.get('/fields.php?department_id=' + deptId);
+      if (res.data?.success) setFields(res.data.data);
+    } catch (err) {}
+  };
+
   const fetchAdvancedSettings = async () => {
     try {
       const res = await api.get('/settings.php');
@@ -95,9 +111,71 @@ export function Settings() {
     fetchDepts();
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'categories') fetchCategories();
+    if (activeTab === 'fields' && selectedDeptForFields) fetchFields(selectedDeptForFields);
     if (activeTab === 'notifications' || activeTab === 'automation') fetchAdvancedSettings();
     setLoading(false);
   }, [activeTab]);
+
+    // ---- FIELD CRUD ----
+  const openFieldModal = (f?: any) => {
+    if (f) {
+      setEditingFieldId(f.id);
+      setFieldForm({
+        field_label: f.field_label,
+        field_type: f.field_type,
+        is_required: f.is_required,
+        options: f.options ? JSON.parse(f.options).join(', ') : ''
+      });
+    } else {
+      setEditingFieldId(null);
+      setFieldForm({ field_label: '', field_type: 'text', is_required: 0, options: '' });
+    }
+    setIsFieldModalOpen(true);
+  };
+
+  const handleDeleteField = async (id: string) => {
+    if (!window.confirm('Delete this field?')) return;
+    try {
+      const res = await api.delete('/fields.php?id=' + id);
+      if (res.data?.success) {
+        if (selectedDeptForFields) fetchFields(selectedDeptForFields);
+      } else alert(res.data?.error || 'Failed');
+    } catch (err) {}
+  };
+
+  const handleSaveField = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDeptForFields) return;
+    setIsSubmitting(true);
+    
+    // Parse options if dropdown
+    let parsedOptions = null;
+    if (fieldForm.field_type === 'dropdown' && fieldForm.options) {
+        parsedOptions = JSON.stringify(fieldForm.options.split(',').map(s => s.trim()).filter(s => s));
+    }
+
+    const payload = {
+        department_id: selectedDeptForFields,
+        field_label: fieldForm.field_label,
+        field_type: fieldForm.field_type,
+        is_required: fieldForm.is_required,
+        options: parsedOptions,
+        id: editingFieldId
+    };
+
+    try {
+      if (editingFieldId) {
+        const res = await api.put('/fields.php', payload);
+        if (res.data?.success) { setIsFieldModalOpen(false); fetchFields(selectedDeptForFields); }
+        else alert(res.data?.error || 'Failed');
+      } else {
+        const res = await api.post('/fields.php', payload);
+        if (res.data?.success) { setIsFieldModalOpen(false); fetchFields(selectedDeptForFields); }
+        else alert(res.data?.error || 'Failed');
+      }
+    } catch (err) {}
+    setIsSubmitting(false);
+  };
 
   // ---- CATEGORY CRUD ----
   const openCategoryModal = (cat?: Category) => {
@@ -257,6 +335,7 @@ export function Settings() {
           <ul className="settings-nav">
             <li className={activeTab === 'general' ? 'active' : ''} onClick={() => setActiveTab('general')}>General & Data</li>
             <li className={activeTab === 'departments' ? 'active' : ''} onClick={() => setActiveTab('departments')}>Departments</li>
+              <li className={activeTab === 'fields' ? 'active' : ''} onClick={() => setActiveTab('fields')}>Custom Questions</li>
              <li className={activeTab === 'categories' ? 'active' : ''} onClick={() => setActiveTab('categories')}>Problem Types</li>
             <li className={activeTab === 'users' ? 'active' : ''} onClick={() => setActiveTab('users')}>Users & Roles</li>
             <li className={activeTab === 'notifications' ? 'active' : ''} onClick={() => setActiveTab('notifications')}>Notifications</li>
@@ -419,7 +498,47 @@ export function Settings() {
             </div>
           )}
 
-          {activeTab === 'departments' && (
+          {activeTab === 'fields' && (
+              <div>
+                <div className="panel-header">
+                  <h2>Custom Department Questions</h2>
+                  <div style={{display: 'flex', gap: '10px'}}>
+                    <select className="form-input" value={selectedDeptForFields} onChange={(e) => { setSelectedDeptForFields(e.target.value); if(e.target.value) fetchFields(e.target.value); }}>
+                        <option value="">Select Department...</option>
+                        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                    <button className="btn-primary" onClick={() => openFieldModal()} disabled={!selectedDeptForFields}>Add Question</button>
+                  </div>
+                </div>
+                {selectedDeptForFields ? (
+                    <div className="table-responsive">
+                      <table className="settings-table">
+                        <thead><tr><th>Label</th><th>Type</th><th>Required</th><th>Options (if dropdown)</th><th style={{ width: '100px' }}>Actions</th></tr></thead>
+                        <tbody>
+                          {fields.map(f => (
+                            <tr key={f.id}>
+                              <td>{f.field_label}</td>
+                              <td>{f.field_type}</td>
+                              <td>{f.is_required ? 'Yes' : 'No'}</td>
+                              <td>{f.options ? JSON.parse(f.options).join(', ') : '-'}</td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <button className="icon-btn" onClick={() => openFieldModal(f)}><Edit size={16} /></button>
+                                  <button className="icon-btn text-danger" onClick={() => handleDeleteField(f.id)}><Trash2 size={16} color="var(--status-open)" /></button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                ) : (
+                    <p style={{marginTop: '20px', color: 'var(--text-secondary)'}}>Please select a department above to view or add custom questions.</p>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'departments' && (
             <div>
               <div className="panel-header">
                 <h2>Departments</h2>
@@ -579,6 +698,45 @@ export function Settings() {
       )}
 
       {/* Dept Modal */}
+      {isFieldModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>{editingFieldId ? 'Edit Question' : 'Add Question'}</h2>
+              <button className="icon-btn" onClick={() => setIsFieldModalOpen(false)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSaveField} className="modal-form">
+              <div className="form-group">
+                <label>Question Label *</label>
+                <input required type="text" className="form-input" value={fieldForm.field_label} onChange={e => setFieldForm({...fieldForm, field_label: e.target.value})} />
+              </div>
+              <div className="form-group">
+                <label>Field Type</label>
+                <select className="form-input" value={fieldForm.field_type} onChange={e => setFieldForm({...fieldForm, field_type: e.target.value})}>
+                    <option value="text">Text Input</option>
+                    <option value="textarea">Multi-line Text (Textarea)</option>
+                    <option value="dropdown">Dropdown Options</option>
+                </select>
+              </div>
+              {fieldForm.field_type === 'dropdown' && (
+                  <div className="form-group">
+                    <label>Dropdown Options (comma separated) *</label>
+                    <input required type="text" className="form-input" placeholder="e.g. ERP Not Working, Internet Issue" value={fieldForm.options} onChange={e => setFieldForm({...fieldForm, options: e.target.value})} />
+                  </div>
+              )}
+              <div className="form-group" style={{flexDirection: 'row', alignItems: 'center', gap: '10px'}}>
+                <input type="checkbox" id="req" checked={fieldForm.is_required === 1} onChange={e => setFieldForm({...fieldForm, is_required: e.target.checked ? 1 : 0})} />
+                <label htmlFor="req" style={{marginBottom: 0}}>Is this question required?</label>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-secondary" onClick={() => setIsFieldModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Question'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {isDeptModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content glass">
@@ -610,6 +768,11 @@ export function Settings() {
     </div>
   );
 }
+
+
+
+
+
 
 
 
