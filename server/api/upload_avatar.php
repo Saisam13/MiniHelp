@@ -45,6 +45,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Update DB with the base64 string directly
         try {
+            // Ensure the column is large enough to hold Base64 strings
+            $db->exec("ALTER TABLE users MODIFY avatar_url LONGTEXT");
+            
             $stmt = $db->prepare("UPDATE users SET avatar_url = :av WHERE id = :id");
             $stmt->execute([":av" => $base64, ":id" => $user_id]);
             
