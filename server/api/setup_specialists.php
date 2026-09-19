@@ -1,11 +1,9 @@
-﻿<?php
+<?php
 include_once '../config/db.php';
 $database = new Database();
 $db = $database->getConnection();
 
 try {
-    $db->beginTransaction();
-
     // 1. Wipe all tickets, history, comments, attachments, etc.
     $tablesToWipe = [
         'ticket_attachments',
@@ -21,12 +19,12 @@ try {
         $db->exec("ALTER TABLE $table AUTO_INCREMENT = 1");
     }
 
-    // 2. Wipe departments (they will be recreated)
+    // 2. Wipe all users EXCEPT admin (MUST be done before deleting departments)
+    $db->exec("DELETE FROM users WHERE role != 'admin'");
+    
+    // 3. Wipe departments (now safe since users are gone)
     $db->exec("DELETE FROM departments");
     $db->exec("ALTER TABLE departments AUTO_INCREMENT = 1");
-
-    // 3. Wipe all users EXCEPT admin
-    $db->exec("DELETE FROM users WHERE role != 'admin'");
 
     // 4. Create the 4 standard departments
     $depts = [
@@ -58,12 +56,11 @@ try {
         $stmtUser->execute([$u['name'], $u['email'], $defaultPassword, $u['dept_id']]);
     }
 
-    $db->commit();
-    echo "Database cleaned and 4 Departments with their Specialists created successfully. Password for all is 'password123'";
+    echo "<h1>Success!</h1>";
+    echo "Database cleaned and 4 Departments with their Specialists created successfully. <br> Password for all specialists is <b>password123</b>";
 
 } catch (Exception $e) {
-    $db->rollBack();
-    echo "Error: " . $e->getMessage();
+    echo "<h1>Error</h1>";
+    echo "Detail: " . $e->getMessage();
 }
 ?>
-
