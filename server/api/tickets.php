@@ -133,18 +133,44 @@ else if ($method === 'POST') {
     $isMultipart = !empty($_POST['data']);
     $data = $isMultipart ? json_decode($_POST['data'], true) : json_decode(file_get_contents("php://input"), true);
     
-    if(!empty($data['title']) && !empty($data['description']) && !empty($data['department_id']) && !empty($data['creator_id'])) {
+        if(!empty($data['title']) && !empty($data['description']) && !empty($data['department_id']) && !empty($data['creator_id'])) {
         try {
             $db->beginTransaction();
+            
+            // AUTO-ASSIGN LOGIC: Find agent in this department with the least active tickets
+            $agentQuery = "SELECT u.id FROM users u 
+                           LEFT JOIN tickets t ON u.id = t.assignee_id AND t.status IN ('open', 'in_progress', 'assigned')
+                           WHERE u.department_id = :did AND u.role IN ('agent', 'dept_head')
+                           GROUP BY u.id
+                           ORDER BY COUNT(t.id) ASC LIMIT 1";
+            $agentStmt = $db->prepare($agentQuery);
+            $agentStmt->execute([":did" => $data['department_id']]);
+            $auto_assignee_id = $agentStmt->fetchColumn();
+            
             $ticket_number = 'MM-' . date('Ymd') . '-' . rand(1000, 9999);
-            $query = "INSERT INTO tickets SET ticket_number=:tn, title=:title, description=:desc, 
-                      priority=:priority, department_id=:dept_id, creator_id=:creator_id";
-            $stmt = $db->prepare($query);
-            $priority = isset($data['priority']) ? $data['priority'] : 'medium';
-            $stmt->execute([
-                ":tn" => $ticket_number, ":title" => $data['title'], ":desc" => $data['description'],
-                ":priority" => $priority, ":dept_id" => $data['department_id'], ":creator_id" => $data['creator_id']
-            ]);
+            
+            if ($auto_assignee_id) {
+                $query = "INSERT INTO tickets SET ticket_number=:tn, title=:title, description=:desc, 
+                          priority=:priority, department_id=:dept_id, creator_id=:creator_id, 
+                          assignee_id=:assignee, status='assigned'";
+                $stmt = $db->prepare($query);
+                $priority = isset($data['priority']) ? $data['priority'] : 'medium';
+                $stmt->execute([
+                    ":tn" => $ticket_number, ":title" => $data['title'], ":desc" => $data['description'],
+                    ":priority" => $priority, ":dept_id" => $data['department_id'], ":creator_id" => $data['creator_id'],
+                    ":assignee" => $auto_assignee_id
+                ]);
+            } else {
+                $query = "INSERT INTO tickets SET ticket_number=:tn, title=:title, description=:desc, 
+                          priority=:priority, department_id=:dept_id, creator_id=:creator_id";
+                $stmt = $db->prepare($query);
+                $priority = isset($data['priority']) ? $data['priority'] : 'medium';
+                $stmt->execute([
+                    ":tn" => $ticket_number, ":title" => $data['title'], ":desc" => $data['description'],
+                    ":priority" => $priority, ":dept_id" => $data['department_id'], ":creator_id" => $data['creator_id']
+                ]);
+            }
+            
             $last_id = $db->lastInsertId();
             
             // Insert Custom Values

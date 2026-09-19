@@ -1,6 +1,5 @@
 <?php
 // api/upload_avatar.php
-
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
@@ -25,11 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
-        $uploadDir = 'uploads/avatars/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
-        
         $fileInfo = pathinfo($_FILES['avatar']['name']);
         $ext = strtolower($fileInfo['extension']);
         $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
@@ -39,31 +33,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(["success" => false, "error" => "Invalid file format"]);
             exit;
         }
-        $fileName = 'avatar_' . $user_id . '_' . time() . '.' . $ext;
-        $targetPath = $uploadDir . $fileName;
-        $dbPath = '/api/avatar.php?id=' . $user_id . '&t=' . time();
+
+        // Convert to Base64 to survive Docker ephemeral file system wipes
+        $tmpName = $_FILES['avatar']['tmp_name'];
+        $mime = mime_content_type($tmpName);
+        $fileData = file_get_contents($tmpName);
         
-        // Delete old avatars for this user
-        $oldFiles = glob($uploadDir . 'avatar_' . $user_id . '_*.*');
-        if ($oldFiles) {
-            foreach ($oldFiles as $oldFile) {
-                @unlink($oldFile);
-            }
-        }
+        // Optional: We can use GD to resize it, but base64 encoding it as-is works.
+        // Assuming user avatars aren't massive.
+        $base64 = 'data:' . $mime . ';base64,' . base64_encode($fileData);
         
-        if (move_uploaded_file($_FILES['avatar']['tmp_name'], $targetPath)) {
-            try {
-                $stmt = $db->prepare("UPDATE users SET avatar_url = :av WHERE id = :id");
-                $stmt->execute([":av" => $dbPath, ":id" => $user_id]);
-                
-                echo json_encode(["success" => true, "avatar_url" => $dbPath]);
-            } catch (PDOException $e) {
-                http_response_code(500);
-                echo json_encode(["success" => false, "error" => "Database error: " . $e->getMessage()]);
-            }
-        } else {
+        // Update DB with the base64 string directly
+        try {
+            $stmt = $db->prepare("UPDATE users SET avatar_url = :av WHERE id = :id");
+            $stmt->execute([":av" => $base64, ":id" => $user_id]);
+            
+            echo json_encode(["success" => true, "avatar_url" => $base64]);
+        } catch (PDOException $e) {
             http_response_code(500);
-            echo json_encode(["success" => false, "error" => "Failed to move uploaded file"]);
+            echo json_encode(["success" => false, "error" => "Database error: " . $e->getMessage()]);
         }
     } else {
         http_response_code(400);
