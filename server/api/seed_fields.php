@@ -4,7 +4,7 @@ $database = new Database();
 $db = $database->getConnection();
 
 try {
-    $db->beginTransaction();
+    $db
 
     // 1. Wipe existing fields to avoid orphans/duplicates
     $db->exec("DELETE FROM form_fields");
@@ -51,13 +51,14 @@ try {
         }
     }
 
-    $db->commit();
+    $db
     echo json_encode(["success" => true, "message" => "Department Specific Questions (Custom Fields) restored successfully!"]);
 
 } catch (Exception $e) {
-    $db->rollBack();
+    $db
     http_response_code(500);
     echo json_encode(["success" => false, "error" => $e->getMessage()]);
 }
 ?>
+
 
