@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuthStore } from '../store';
@@ -19,6 +19,7 @@ export function CreateTicket() {
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState('low');
   const [category, setCategory] = useState('software');
+  const [categoryId, setCategoryId] = useState('');
   const [description, setDescription] = useState('');
   const [dynamicFields, setDynamicFields] = useState<any[]>([]);
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
@@ -32,28 +33,38 @@ export function CreateTicket() {
     });
   }, []);
 
-
   const handleNextStep = async () => {
     if (!selectedDept) return;
     try {
-      const res = await api.get(`/fields.php?department_id=${selectedDept}`);
       const catRes = await api.get(`/categories.php?department_id=${selectedDept}`);
       if (catRes.data?.success) {
         setCategories(catRes.data.data);
         if (catRes.data.data.length > 0) {
           setCategory(catRes.data.data[0].name);
+          setCategoryId(catRes.data.data[0].id.toString());
         } else {
           setCategory('General');
+          setCategoryId('');
         }
       }
-      if (res.data && res.data.success) {
-        setDynamicFields(res.data.data);
-      }
     } catch (err) {
-      console.error("Failed to load dynamic fields", err);
+      console.error("Failed to load categories", err);
     }
     setStep(2);
   };
+
+  useEffect(() => {
+    if (categoryId) {
+      api.get(`/fields.php?category_id=${categoryId}`).then(res => {
+        if (res.data?.success) {
+          setDynamicFields(res.data.data);
+          setCustomValues({});
+        }
+      }).catch(err => console.error(err));
+    } else {
+      setDynamicFields([]);
+    }
+  }, [categoryId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,15 +191,24 @@ export function CreateTicket() {
                     <option value="critical">Critical</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Category</label>
-                  <select className="form-input" value={category} onChange={e => setCategory(e.target.value)}>
-                    <option value="software">Software</option>
-                    <option value="hardware">Hardware</option>
-                    <option value="access">Access/Permissions</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
+                  <div className="form-group">
+                    <label>Category (Problem Type)</label>
+                    <select 
+                      className="form-input" 
+                      value={categoryId} 
+                      onChange={e => {
+                        const selectedId = e.target.value;
+                        setCategoryId(selectedId);
+                        const selectedCat = categories.find(c => c.id.toString() === selectedId);
+                        setCategory(selectedCat ? selectedCat.name : 'General');
+                      }}
+                    >
+                      {categories.length === 0 && <option value="">No categories available</option>}
+                      {categories.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
               </div>
 
               <div className="form-group">

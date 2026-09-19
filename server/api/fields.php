@@ -8,12 +8,12 @@ $database = new Database();
 $db = $database->getConnection();
 
 if ($method === 'GET') {
-    $dept_id = isset($_GET['department_id']) ? $_GET['department_id'] : null;
+    $cat_id = isset($_GET['category_id']) ? $_GET['category_id'] : null;
     
-    if ($dept_id) {
+    if ($cat_id) {
         try {
-            $stmt = $db->prepare("SELECT * FROM form_fields WHERE department_id = :did");
-            $stmt->bindParam(":did", $dept_id);
+            $stmt = $db->prepare("SELECT * FROM form_fields WHERE category_id = :cid");
+            $stmt->bindParam(":cid", $cat_id);
             $stmt->execute();
             $fields = $stmt->fetchAll();
             echo json_encode(["success" => true, "data" => $fields]);
@@ -23,7 +23,7 @@ if ($method === 'GET') {
         }
     } else {
         http_response_code(400);
-        echo json_encode(["success" => false, "error" => "department_id is required"]);
+        echo json_encode(["success" => false, "error" => "category_id is required"]);
     }
 } else {
     http_response_code(405);
