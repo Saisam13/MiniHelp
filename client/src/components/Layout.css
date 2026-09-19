@@ -1,6 +1,6 @@
-.layout-container {
+﻿.layout-container {
   display: flex;
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   background-color: var(--bg-primary);
@@ -233,7 +233,7 @@
   .nav-item.active { background-color: transparent; color: var(--accent-primary); }
   .nav-item.active::before { content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 3px; background: var(--accent-primary); border-radius: 0 0 4px 4px; }
   
-  .main-wrapper { margin-bottom: 70px; }
+  .main-wrapper { margin-bottom: 0; }
   
   .top-header { padding: 0 16px; justify-content: space-between; }
   
@@ -246,10 +246,11 @@
   .mobile-brand-name { font-weight: 700; font-size: 1rem; color: var(--text-primary); }
   
   .user-info { display: none; }
-  .main-content { padding: 16px; }
+  .main-content { padding: 16px; padding-bottom: 110px; }
   
   /* Hide search bar on mobile if needed, or adjust padding */
 }
 
 
 .notification-badge { position: absolute; top: -5px; right: -5px; background: #EF4444; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+

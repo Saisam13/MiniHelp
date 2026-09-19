@@ -35,7 +35,8 @@ self.addEventListener('push', (event) => {
       priority: data.priority
     },
     silent: false, // Force OS default sound
-    requireInteraction: true
+    tag: 'minihelp-' + Date.now(),
+    renotify: true
   };
 
   event.waitUntil(
