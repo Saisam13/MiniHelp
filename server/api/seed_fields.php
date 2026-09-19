@@ -49,11 +49,9 @@ try {
         }
     }
 
-    $db
     echo json_encode(["success" => true, "message" => "Department Specific Questions (Custom Fields) restored successfully!"]);
 
 } catch (Exception $e) {
-    $db
     http_response_code(500);
     echo json_encode(["success" => false, "error" => $e->getMessage()]);
 }
