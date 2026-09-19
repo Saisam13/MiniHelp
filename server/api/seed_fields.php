@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 include_once '../config/db.php';
 $database = new Database();
 $db = $database->getConnection();
@@ -7,8 +7,8 @@ try {
     $db->beginTransaction();
 
     // 1. Wipe existing fields to avoid orphans/duplicates
-    $db->exec("DELETE FROM department_fields");
-    $db->exec("ALTER TABLE department_fields AUTO_INCREMENT = 1");
+    $db->exec("DELETE FROM form_fields");
+    $db->exec("ALTER TABLE form_fields AUTO_INCREMENT = 1");
 
     // 2. Fetch Department IDs
     $stmt = $db->query("SELECT id, code FROM departments");
@@ -40,7 +40,7 @@ try {
     ];
 
     // 4. Insert Custom Fields
-    $insertStmt = $db->prepare("INSERT INTO department_fields (department_id, field_label, field_type, is_required) VALUES (?, ?, ?, ?)");
+    $insertStmt = $db->prepare("INSERT INTO form_fields (department_id, field_label, field_type, is_required) VALUES (?, ?, ?, ?)");
     
     foreach ($seedFields as $code => $fields) {
         if (isset($deptMap[$code])) {
@@ -60,3 +60,4 @@ try {
     echo json_encode(["success" => false, "error" => $e->getMessage()]);
 }
 ?>
+
