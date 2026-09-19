@@ -4,7 +4,9 @@ $database = new Database();
 $db = $database->getConnection();
 
 try {
+    $db->exec("SET FOREIGN_KEY_CHECKS = 0;");
     $db->exec("DROP TABLE IF EXISTS form_fields");
+    $db->exec("SET FOREIGN_KEY_CHECKS = 1;");
     $db->exec("
         CREATE TABLE form_fields (
             id INT AUTO_INCREMENT PRIMARY KEY,
