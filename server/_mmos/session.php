@@ -59,7 +59,9 @@ if (!$user) {
 }
 
 // Set the session cookie — HttpOnly, Secure, SameSite=Lax for top-level handoff
-$secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+// TLS ends at Coolify's proxy, so $_SERVER['HTTPS'] is never set here; trust the environment.
+$secure = $cfg->environment === 'production'
+    || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
 $cookie_opts = [
     'expires'  => $claims['exp'] ?? time() + 900,
     'path'     => '/',

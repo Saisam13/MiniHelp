@@ -44,19 +44,19 @@ class MMOSJwtVerifier {
             throw new JWTVerificationError('bad_signature');
         }
 
-        if (isset($payload['iss']) && $payload['iss'] !== $this->issuer) {
+        // MM OS always sets iss, aud and exp, so a token missing any of them is rejected.
+        if (($payload['iss'] ?? null) !== $this->issuer) {
             throw new JWTVerificationError('invalid_issuer');
         }
 
-        if (isset($payload['aud'])) {
-            $aud = is_array($payload['aud']) ? $payload['aud'] : [$payload['aud']];
-            if (!in_array($this->audience, $aud, true)) {
-                throw new JWTVerificationError('invalid_audience');
-            }
+        $aud = $payload['aud'] ?? [];
+        $aud = is_array($aud) ? $aud : [$aud];
+        if (!in_array($this->audience, $aud, true)) {
+            throw new JWTVerificationError('invalid_audience');
         }
 
         $now = time();
-        if (isset($payload['exp']) && $payload['exp'] < $now) {
+        if (!isset($payload['exp']) || $payload['exp'] < $now) {
             throw new JWTVerificationError('expired');
         }
         if (isset($payload['iat']) && $payload['iat'] > $now + 60) {
